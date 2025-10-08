@@ -12,11 +12,17 @@ def inject_styles():
         """
         <style>
         /* Основные стили */
-        .block-container { padding-top: 1rem; }
-        .metric-card { border:1px solid rgba(49,51,63,.2); border-radius:16px; padding:12px 14px; background: #fff; }
-        .section-card { border:1px solid rgba(49,51,63,.2); border-radius:16px; padding:18px; background:#fff; }
+        .stApp {
+            background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+        }
+        .main .block-container {
+            background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+            padding-top: 1rem;
+        }
+        .metric-card { border:1px solid rgba(49,51,63,.2); border-radius:16px; padding:12px 14px; background: rgba(255,255,255,0.05); color: #e2e8f0; }
+        .section-card { border:1px solid rgba(49,51,63,.2); border-radius:16px; padding:18px; background: rgba(255,255,255,0.05); color: #e2e8f0; }
         .hr-soft { height:1px; border:none; background:rgba(99,102,241,.25); margin: .75rem 0 1rem; }
-        .hint { color:#64748b; font-style:italic; }
+        .hint { color:#94a3b8; font-style:italic; }
         
         /* Стили для сайдбара */
         [data-testid="stSidebar"] {
