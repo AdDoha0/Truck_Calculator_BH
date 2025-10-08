@@ -72,6 +72,7 @@ class MonthlyRow(Base):
     salary: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     fuel: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     tolls: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+    repair: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
 
     truck: Mapped[Truck] = relationship(back_populates="monthly_rows")
 
