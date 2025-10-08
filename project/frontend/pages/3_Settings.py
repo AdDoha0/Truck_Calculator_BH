@@ -1,8 +1,9 @@
 import streamlit as st
-from ui_utils import inject_styles
+from ui_utils import inject_styles, sidebar_content
 
 st.set_page_config(page_title="Настройки • BH Trans", page_icon="⚙️", layout="wide")
 inject_styles()
+sidebar_content()
 
 st.header("⚙️ Настройки фиксированных расходов (UI-заглушки)")
 

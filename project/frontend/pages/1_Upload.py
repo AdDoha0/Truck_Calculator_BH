@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from ui_utils import inject_styles, preview_excel
+from ui_utils import inject_styles, preview_excel, sidebar_content
 
 st.set_page_config(page_title="Загрузка • BH Trans", page_icon="📁", layout="wide")
 inject_styles()
+sidebar_content()
 
 st.header("📁 Загрузка месячных данных")
 

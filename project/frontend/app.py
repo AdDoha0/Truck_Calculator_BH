@@ -1,5 +1,5 @@
 import streamlit as st
-from ui_utils import inject_styles
+from ui_utils import inject_styles, sidebar_content
 
 st.set_page_config(
     page_title="BH Trans • Отчёты по тракам",
@@ -8,6 +8,7 @@ st.set_page_config(
 )
 
 inject_styles()
+sidebar_content()
 
 st.title("🚛 BH Trans — дашборд по тракам")
 

@@ -1,8 +1,9 @@
 import streamlit as st
-from ui_utils import inject_styles, demo_months, demo_unit_month
+from ui_utils import inject_styles, demo_months, demo_unit_month, sidebar_content
 
 st.set_page_config(page_title="Отчёт • BH Trans", page_icon="📊", layout="wide")
 inject_styles()
+sidebar_content()
 
 st.header("📊 Отчёт по тракам")
 

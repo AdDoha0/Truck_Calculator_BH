@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-from ui_utils import inject_styles
+from ui_utils import inject_styles, sidebar_content
 
 st.set_page_config(page_title="Справочники • BH Trans", page_icon="📚", layout="wide")
 inject_styles()
+sidebar_content()
 
 st.header("📚 Справочники и сервисные страницы")
 
