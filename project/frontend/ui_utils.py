@@ -24,6 +24,36 @@ def inject_styles():
         .hr-soft { height:1px; border:none; background:rgba(99,102,241,.25); margin: .75rem 0 1rem; }
         .hint { color:#94a3b8; font-style:italic; }
         
+        /* Убираем светлый фон из верхней части */
+        [data-testid="stHeader"] {
+            background: transparent !important;
+        }
+        
+        /* Гармонизируем заголовки с темной темой */
+        .main h1, .main h2, .main h3,
+        [data-testid="stMarkdownContainer"] h1,
+        [data-testid="stMarkdownContainer"] h2,
+        [data-testid="stMarkdownContainer"] h3,
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+            color: #cbd5e1 !important;
+        }
+        
+        /* Заголовки h1 - основные */
+        .main h1, [data-testid="stMarkdownContainer"] h1 {
+            color: #cbd5e1 !important;
+        }
+        
+        /* Подзаголовки h2 и h3 - более мягкие */
+        .main h2, [data-testid="stMarkdownContainer"] h2,
+        .main h3, [data-testid="stMarkdownContainer"] h3 {
+            color: #94a3b8 !important;
+        }
+        
+        /* Общий контейнер - единый фон */
+        .main, .block-container, [data-testid="stAppViewContainer"] {
+            background: transparent !important;
+        }
+        
         /* Стили для сайдбара */
         [data-testid="stSidebar"] {
             background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
