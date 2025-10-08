@@ -1,8 +1,7 @@
 import streamlit as st
-from ui_utils import inject_styles, demo_months, demo_unit_month, sidebar_content
+from ui_utils import demo_months, demo_unit_month, sidebar_content
 
 st.set_page_config(page_title="Отчёт • BH Trans", page_icon="📊", layout="wide")
-inject_styles()
 sidebar_content()
 
 st.header("📊 Отчёт по тракам")
@@ -14,30 +13,22 @@ df = demo_unit_month()
 
 k1,k2,k3,k4 = st.columns(4)
 with k1:
-    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
     st.metric("Sum(Rev)", f"${df['total_rev'].sum():,.0f}")
-    st.markdown("</div>", unsafe_allow_html=True)
 with k2:
-    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
     st.metric("Sum(Var)", f"${df['total_variable'].sum():,.0f}")
-    st.markdown("</div>", unsafe_allow_html=True)
 with k3:
-    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
     st.metric("Sum(Fixed)", f"${df['total_fixed'].sum():,.0f}")
-    st.markdown("</div>", unsafe_allow_html=True)
 with k4:
-    st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
     st.metric("Sum(GP)", f"${df['gross_profit'].sum():,.0f}")
-    st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<hr class='hr-soft'>", unsafe_allow_html=True)
+st.divider()
 
 st.subheader("🧾 Таблица v_unit_month")
 st.dataframe(df[[
     "tractor_no","driver_name","total_rev","total_miles","salary","fuel","tolls","repair","total_variable","total_fixed","gross_profit","rpm","cpm"
 ]])
 
-st.markdown("<hr class='hr-soft'>", unsafe_allow_html=True)
+st.divider()
 
 g1,g2 = st.columns(2)
 with g1:

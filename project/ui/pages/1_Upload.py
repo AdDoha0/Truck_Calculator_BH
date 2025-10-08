@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from ui_utils import inject_styles, preview_excel, sidebar_content
+from ui_utils import preview_excel, sidebar_content
 
 st.set_page_config(page_title="Загрузка • BH Trans", page_icon="📁", layout="wide")
-inject_styles()
 sidebar_content()
 
 st.header("📁 Загрузка месячных данных")
@@ -17,9 +16,9 @@ with st.container():
     with c2:
         currency = st.selectbox("Валюта", ["USD","EUR"], index=0)
     with c3:
-        st.markdown("<div class='hint'>Все Excel должны содержать колонку <code>tractor_no</code>.</div>", unsafe_allow_html=True)
+        st.info("💡 Все Excel должны содержать колонку `tractor_no`.")
 
-st.markdown("<hr class='hr-soft'>", unsafe_allow_html=True)
+st.divider()
 
 with st.container():
     st.subheader("2) Файлы по категориям")
@@ -32,7 +31,7 @@ with st.container():
         salary_file = st.file_uploader("👷 Salary (.xlsx)", type=["xlsx"], key="salary")
         gross_file  = st.file_uploader("💵 Gross (.xlsx) — total_rev и total_miles", type=["xlsx"], key="gross")
 
-st.markdown("<hr class='hr-soft'>", unsafe_allow_html=True)
+st.divider()
 
 with st.container():
     st.subheader("3) Предпросмотр и валидация")
@@ -58,7 +57,6 @@ with st.container():
     st.subheader("🔎 Валидация tractor_no (демо)")
     st.dataframe(pd.DataFrame({"tractor_no":["1740","9999"], "status":["OK","NOT FOUND"], "Комментарий":["есть в БД","добавить в справочник"]}))
 
-st.markdown("<br>", unsafe_allow_html=True)
 
 st.button("💾 Залить в БД (UPsert)", help="Пока без логики — заглушка")
 

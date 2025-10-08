@@ -5,14 +5,22 @@ Streamlit adapter - handles UI-specific concerns.
 import streamlit as st
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
-from ...application.use_cases.truck_management import TruckManagementUseCase
-from ...application.use_cases.costs_management import CostsManagementUseCase
-from ...application.use_cases.reporting import ReportingUseCase
-from ...application.dto.truck_dto import CreateTruckRequest, UpdateTruckRequest, TruckDto
-from ...application.dto.costs_dto import UpdateTruckCostsRequest, UpdateCommonCostsRequest
-from ...data.repositories.sqlalchemy_truck_repo import SqlAlchemyTruckRepository
-from ...data.repositories.sqlalchemy_costs_repo import SqlAlchemyCostsRepository
-from ...domain.entities.truck import TruckId
+import sys
+import os
+
+# Добавляем корневую директорию проекта в Python path
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+
+from project.application.use_cases.truck_management import TruckManagementUseCase
+from project.application.use_cases.costs_management import CostsManagementUseCase
+from project.application.use_cases.reporting import ReportingUseCase
+from project.application.dto.truck_dto import CreateTruckRequest, UpdateTruckRequest, TruckDto
+from project.application.dto.costs_dto import UpdateTruckCostsRequest, UpdateCommonCostsRequest
+from project.data.repositories.sqlalchemy_truck_repo import SqlAlchemyTruckRepository
+from project.data.repositories.sqlalchemy_costs_repo import SqlAlchemyCostsRepository
+from project.domain.entities.truck import TruckId
 
 
 class StreamlitAdapter:
@@ -280,7 +288,7 @@ class StreamlitAdapter:
     def init_database():
         """Initialize database tables."""
         try:
-            from ...data.database.database import init_db
+            from project.data.database.database import init_db
             init_db()
             
         except Exception as e:

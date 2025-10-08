@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from ui_utils import inject_styles, sidebar_content
+from ui_utils import sidebar_content
 from db_utils import (
     init_database,
     create_truck,
@@ -15,7 +15,6 @@ from db_utils import (
 )
 
 st.set_page_config(page_title="Справочники • BH Trans", page_icon="📚", layout="wide")
-inject_styles()
 sidebar_content()
 
 # Инициализация БД

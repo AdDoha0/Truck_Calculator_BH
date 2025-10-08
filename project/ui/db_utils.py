@@ -6,7 +6,7 @@ for backward compatibility and easy integration with existing UI code.
 """
 
 from typing import List, Dict, Any, Optional
-from .adapters.streamlit_adapter import get_adapter
+from adapters.streamlit_adapter import get_adapter
 
 
 # Initialize database
