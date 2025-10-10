@@ -25,4 +25,6 @@ fi
 # Запуск приложения
 echo "✓ Запуск Streamlit приложения..."
 echo ""
-streamlit run project/frontend/app.py
+export PYTHONPATH=/home/user/my_projects/BH/truck_calculate/project
+cd project
+streamlit run ui/app.py

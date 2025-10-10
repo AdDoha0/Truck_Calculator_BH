@@ -282,6 +282,163 @@ class StreamlitAdapter:
             st.error(f"❌ Неожиданная ошибка: {e}")
             return False
     
+    # Advanced truck data methods
+    
+    def get_trucks_with_costs_and_period(self, period_month: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Get all trucks with fixed costs and variable costs for a specific period.
+        
+        Args:
+            period_month: Period in format 'YYYY-MM-DD' or None for latest/all
+            
+        Returns:
+            List of dictionaries with complete truck and cost data
+        """
+        try:
+            from project.data.database.database import get_db_session
+            from project.data.database.models import Truck as TruckORM, MonthlyRow as MonthlyRowORM, FixedCostsTruck as FixedCostsTruckORM
+            from datetime import datetime
+            
+            result = []
+            
+            with get_db_session() as session:
+                trucks = session.query(TruckORM).all()
+                
+                for truck in trucks:
+                    # Get fixed costs for truck
+                    fixed_costs_orm = session.query(FixedCostsTruckORM).filter(
+                        FixedCostsTruckORM.truck_id == truck.id
+                    ).first()
+                    
+                    # Get variable costs for period
+                    monthly_data = None
+                    if period_month:
+                        try:
+                            period_date = datetime.strptime(period_month, '%Y-%m-%d').date()
+                            monthly_data = session.query(MonthlyRowORM).filter(
+                                MonthlyRowORM.truck_id == truck.id,
+                                MonthlyRowORM.period_month == period_date
+                            ).first()
+                        except ValueError:
+                            pass
+                    
+                    # Build result dictionary with safe attribute access
+                    truck_data = {
+                        'id': truck.id,
+                        'tractor_no': truck.tractor_no,
+                        # Fixed costs
+                        'truck_payment': float(fixed_costs_orm.truck_payment) if fixed_costs_orm else 0.0,
+                        'trailer_payment': float(fixed_costs_orm.trailer_payment) if fixed_costs_orm else 0.0,
+                        'truck_insurance': float(fixed_costs_orm.physical_damage_insurance_truck) if fixed_costs_orm else 0.0,
+                        'trailer_insurance': float(fixed_costs_orm.physical_damage_insurance_trailer) if fixed_costs_orm else 0.0,
+                        # Variable costs
+                        'salary': float(monthly_data.salary) if monthly_data else 0.0,
+                        'fuel': float(monthly_data.fuel) if monthly_data else 0.0,
+                        'tolls': float(monthly_data.tolls) if monthly_data else 0.0,
+                        # Metadata
+                        'has_monthly_data': monthly_data is not None,
+                        'monthly_row_id': monthly_data.id if monthly_data else None,
+                    }
+                    
+                    result.append(truck_data)
+            
+            return result
+            
+        except Exception as e:
+            st.error(f"❌ Ошибка загрузки данных траков: {e}")
+            return []
+    
+    def update_truck_costs_from_table(self, truck_id: int, **cost_updates) -> bool:
+        """
+        Update truck-specific fixed costs from table editing.
+        
+        Args:
+            truck_id: ID of the truck
+            **cost_updates: Cost fields to update (truck_payment, trailer_payment, etc.)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        # Reuse existing update_truck_costs method
+        return self.update_truck_costs(truck_id, **cost_updates)
+    
+    def update_variable_costs(self, truck_id: int, period_month: str, **cost_updates) -> bool:
+        """
+        Update variable costs for a specific truck and period.
+        
+        Args:
+            truck_id: ID of the truck
+            period_month: Period in format 'YYYY-MM-DD'
+            **cost_updates: Variable cost fields to update (salary, fuel, tolls, repair)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from project.data.database.database import get_db_session
+            from project.data.database.models import MonthlyRow as MonthlyRowORM
+            from datetime import datetime
+            
+            period_date = datetime.strptime(period_month, '%Y-%m-%d').date()
+            
+            with get_db_session() as session:
+                # Find existing monthly row
+                monthly_row = session.query(MonthlyRowORM).filter(
+                    MonthlyRowORM.truck_id == truck_id,
+                    MonthlyRowORM.period_month == period_date
+                ).first()
+                
+                if not monthly_row:
+                    # Create new monthly row if not exists
+                    monthly_row = MonthlyRowORM(
+                        truck_id=truck_id,
+                        period_month=period_date,
+                        total_rev=0,
+                        total_miles=0,
+                        salary=0,
+                        fuel=0,
+                        tolls=0
+                    )
+                    session.add(monthly_row)
+                
+                # Update fields
+                valid_fields = {'salary', 'fuel', 'tolls'}
+                for field, value in cost_updates.items():
+                    if field in valid_fields and value is not None:
+                        setattr(monthly_row, field, float(value))
+                
+                session.flush()
+                
+            st.success(f"✅ Переменные расходы обновлены для трака ID {truck_id}")
+            return True
+            
+        except Exception as e:
+            st.error(f"❌ Ошибка обновления переменных расходов: {e}")
+            return False
+    
+    def get_available_periods(self) -> List[str]:
+        """
+        Get list of available periods from monthly data.
+        
+        Returns:
+            List of period strings in format 'YYYY-MM-DD'
+        """
+        try:
+            from project.data.database.database import get_db_session
+            from project.data.database.models import MonthlyRow as MonthlyRowORM
+            from sqlalchemy import distinct
+            
+            with get_db_session() as session:
+                periods = session.query(distinct(MonthlyRowORM.period_month))\
+                    .order_by(MonthlyRowORM.period_month.desc())\
+                    .all()
+                
+                return [str(period[0]) for period in periods]
+            
+        except Exception as e:
+            st.error(f"❌ Ошибка загрузки периодов: {e}")
+            return []
+    
     # Database initialization
     
     @staticmethod

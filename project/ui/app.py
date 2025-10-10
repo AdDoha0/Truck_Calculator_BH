@@ -1,3 +1,5 @@
+import path_setup  # This sets up the Python path
+
 import streamlit as st
 from ui_utils import sidebar_content
 

@@ -1,12 +1,12 @@
 """
 Database utilities for Streamlit UI.
 
-This module provides simple functions that wrap the StreamlitAdapter
+This module provides simple functions that wrap the UIAdapter
 for backward compatibility and easy integration with existing UI code.
 """
 
 from typing import List, Dict, Any, Optional
-from adapters.streamlit_adapter import get_adapter
+from ui_adapter import get_adapter
 
 
 # Initialize database
@@ -49,7 +49,7 @@ def get_truck_costs(truck_id: int) -> Dict[str, float]:
 
 def update_truck_costs(truck_id: int, **cost_updates) -> bool:
     """Update truck-specific fixed costs."""
-    return get_adapter().update_truck_costs(truck_id, **cost_updates)
+    return get_adapter().update_truck_costs(truck_id, cost_updates)
 
 
 def get_common_costs() -> Dict[str, float]:
@@ -59,7 +59,35 @@ def get_common_costs() -> Dict[str, float]:
 
 def update_common_costs(**cost_updates) -> bool:
     """Update common fixed costs."""
-    return get_adapter().update_common_costs(**cost_updates)
+    return get_adapter().update_common_costs(cost_updates)
+
+
+# Advanced truck data functions
+def get_trucks_full_data(period_month: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Get all trucks with complete cost data for a specific period.
+    
+    Args:
+        period_month: Period in format 'YYYY-MM-DD' or None
+        
+    Returns:
+        List of dictionaries with truck and cost data
+    """
+    return get_adapter().get_trucks_full_data(period_month)
+
+
+# Note: Variable costs are now managed through separate Excel upload process
+# def update_variable_costs - removed as not supported in simplified architecture
+
+
+def get_available_periods() -> List[str]:
+    """
+    Get list of available periods from monthly data.
+    
+    Returns:
+        List of period strings in format 'YYYY-MM-DD'
+    """
+    return get_adapter().get_available_periods()
 
 
 # Utility functions for backward compatibility
