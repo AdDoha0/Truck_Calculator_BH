@@ -57,7 +57,17 @@ const TruckCostsTableSection: React.FC<TruckCostsTableSectionProps> = ({
       key: 'latest_variable_costs',
       title: 'Период',
       render: (_, truck) => truck.latest_variable_costs?.period_month 
-        ? new Date(truck.latest_variable_costs.period_month).toLocaleDateString('ru-RU', { year: 'numeric', month: 'short' })
+        ? (() => {
+            try {
+              // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
+              const dateValue = truck.latest_variable_costs.period_month.length === 7 
+                ? `${truck.latest_variable_costs.period_month}-01` 
+                : truck.latest_variable_costs.period_month;
+              return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'short' });
+            } catch {
+              return truck.latest_variable_costs.period_month;
+            }
+          })()
         : '-',
     },
     {

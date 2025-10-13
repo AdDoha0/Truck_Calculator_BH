@@ -59,7 +59,7 @@ const TruckDetailPage: React.FC = () => {
               ← Назад
             </Button>
             <h1 className="text-3xl font-bold text-secondary-900">
-              Трак {truck.tractor_no}
+              Трак {truck?.tractor_no || 'Неизвестно'}
             </h1>
           </div>
           <p className="text-secondary-600 mt-1">
@@ -84,7 +84,7 @@ const TruckDetailPage: React.FC = () => {
       <ConfirmDialog
         isOpen={deleteConfirm}
         title="Удалить трак?"
-        message={`Вы уверены, что хотите удалить трак ${truck.tractor_no}? Все связанные затраты будут также удалены. Это действие нельзя отменить.`}
+        message={`Вы уверены, что хотите удалить трак ${truck?.tractor_no || 'Неизвестно'}? Все связанные затраты будут также удалены. Это действие нельзя отменить.`}
         confirmText="Удалить"
         cancelText="Отмена"
         onConfirm={handleDelete}

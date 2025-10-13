@@ -28,10 +28,10 @@ const FixedCostsForm: React.FC<FixedCostsFormProps> = ({
   useEffect(() => {
     if (costs) {
       setFormData({
-        truck_payment: costs.truck_payment.toString(),
-        trailer_payment: costs.trailer_payment.toString(),
-        physical_damage_insurance_truck: costs.physical_damage_insurance_truck.toString(),
-        physical_damage_insurance_trailer: costs.physical_damage_insurance_trailer.toString(),
+        truck_payment: (costs.truck_payment || 0).toString(),
+        trailer_payment: (costs.trailer_payment || 0).toString(),
+        physical_damage_insurance_truck: (costs.physical_damage_insurance_truck || 0).toString(),
+        physical_damage_insurance_trailer: (costs.physical_damage_insurance_trailer || 0).toString(),
       });
     }
   }, [costs]);

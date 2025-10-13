@@ -32,23 +32,23 @@ const CommonCostsSection: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-secondary-600">IFTA:</span>
-                <span className="ml-2 font-medium">${commonCosts.ifta}</span>
+                <span className="ml-2 font-medium">${commonCosts.ifta || 0}</span>
               </div>
               <div>
                 <span className="text-secondary-600">Страхование:</span>
-                <span className="ml-2 font-medium">${commonCosts.insurance}</span>
+                <span className="ml-2 font-medium">${commonCosts.insurance || 0}</span>
               </div>
               <div>
                 <span className="text-secondary-600">ELD:</span>
-                <span className="ml-2 font-medium">${commonCosts.eld}</span>
+                <span className="ml-2 font-medium">${commonCosts.eld || 0}</span>
               </div>
               <div>
                 <span className="text-secondary-600">Планшет:</span>
-                <span className="ml-2 font-medium">${commonCosts.tablet}</span>
+                <span className="ml-2 font-medium">${commonCosts.tablet || 0}</span>
               </div>
               <div>
                 <span className="text-secondary-600">Платные дороги:</span>
-                <span className="ml-2 font-medium">${commonCosts.tolls}</span>
+                <span className="ml-2 font-medium">${commonCosts.tolls || 0}</span>
               </div>
             </div>
           ) : (

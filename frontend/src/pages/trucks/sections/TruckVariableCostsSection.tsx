@@ -31,9 +31,22 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
 
   const handleSubmit = async (data: TruckVariableCostsCreate) => {
     try {
-      if (editingCosts) {
+      if (editingCosts?.id) {
         await updateMutation.mutate({ id: editingCosts.id, data });
       } else {
+        // Проверяем, есть ли уже запись для этого трака и месяца
+        const existingRecord = variableCosts?.find(cost => {
+          // Нормализуем даты для сравнения
+          const existingDate = cost.period_month.length === 7 ? `${cost.period_month}-01` : cost.period_month;
+          const newDate = data.period_month.length === 7 ? `${data.period_month}-01` : data.period_month;
+          return cost.truck === data.truck && existingDate === newDate;
+        });
+        
+        if (existingRecord) {
+          alert(`Запись для трака и периода ${data.period_month} уже существует. Выберите другой период или отредактируйте существующую запись.`);
+          return;
+        }
+        
         await createMutation.mutate(data);
       }
       setIsAddModalOpen(false);
@@ -41,6 +54,12 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       refetch();
     } catch (error) {
       console.error('Ошибка при сохранении переменных затрат:', error);
+      // Показываем более подробную информацию об ошибке
+      if (error.response?.data?.non_field_errors) {
+        alert(`Ошибка валидации: ${error.response.data.non_field_errors.join(', ')}`);
+      } else {
+        alert('Произошла ошибка при сохранении данных');
+      }
     }
   };
 
@@ -54,7 +73,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
   };
 
   const confirmDelete = async () => {
-    if (!deleteConfirm.costs) return;
+    if (!deleteConfirm.costs?.id) return;
 
     try {
       await deleteMutation.mutate(deleteConfirm.costs.id);
@@ -70,7 +89,15 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       key: 'period_month',
       title: 'Период',
       sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' }),
+      render: (value: string) => {
+        try {
+          // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
+          const dateValue = value.length === 7 ? `${value}-01` : value;
+          return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+        } catch {
+          return value;
+        }
+      },
     },
     {
       key: 'driver_name',
@@ -166,7 +193,17 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title="Удалить переменные затраты?"
-        message={`Вы уверены, что хотите удалить данные за период ${deleteConfirm.costs?.period_month ? new Date(deleteConfirm.costs.period_month).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' }) : ''}?`}
+        message={`Вы уверены, что хотите удалить данные за период ${deleteConfirm.costs?.period_month ? (() => {
+          try {
+            // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
+            const dateValue = deleteConfirm.costs.period_month.length === 7 
+              ? `${deleteConfirm.costs.period_month}-01` 
+              : deleteConfirm.costs.period_month;
+            return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+          } catch {
+            return deleteConfirm.costs.period_month;
+          }
+        })() : ''}?`}
         confirmText="Удалить"
         cancelText="Отмена"
         onConfirm={confirmDelete}

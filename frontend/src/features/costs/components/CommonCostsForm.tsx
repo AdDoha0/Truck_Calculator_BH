@@ -27,11 +27,11 @@ const CommonCostsForm: React.FC<CommonCostsFormProps> = ({
   useEffect(() => {
     if (costs) {
       setFormData({
-        ifta: costs.ifta.toString(),
-        insurance: costs.insurance.toString(),
-        eld: costs.eld.toString(),
-        tablet: costs.tablet.toString(),
-        tolls: costs.tolls.toString(),
+        ifta: (costs.ifta || 0).toString(),
+        insurance: (costs.insurance || 0).toString(),
+        eld: (costs.eld || 0).toString(),
+        tablet: (costs.tablet || 0).toString(),
+        tolls: (costs.tolls || 0).toString(),
       });
     }
   }, [costs]);

@@ -41,7 +41,7 @@ const TrucksPage: React.FC = () => {
   };
 
   const confirmDelete = async () => {
-    if (!deleteConfirm.truck) return;
+    if (!deleteConfirm.truck?.id) return;
     
     try {
       await deleteMutation.mutate(deleteConfirm.truck.id);

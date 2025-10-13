@@ -89,6 +89,12 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
         # Фильтрация по месяцу
         period_month = request.query_params.get('period_month')
         if period_month:
+            # Если period_month приходит как массив, берем первый элемент
+            if isinstance(period_month, list):
+                period_month = period_month[0]
+            # Добавляем день для корректного сравнения с DateField
+            if len(period_month) == 7:  # YYYY-MM формат
+                period_month = f"{period_month}-01"
             queryset = queryset.filter(period_month=period_month)
         
         # Фильтрация по траку

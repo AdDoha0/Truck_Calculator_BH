@@ -30,14 +30,19 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
 
   useEffect(() => {
     if (costs) {
+      // Преобразуем YYYY-MM-DD в YYYY-MM для input type="month"
+      const periodMonth = costs.period_month.length > 7 
+        ? costs.period_month.slice(0, 7) 
+        : costs.period_month;
+        
       setFormData({
-        period_month: costs.period_month,
+        period_month: periodMonth,
         driver_name: costs.driver_name || '',
-        total_rev: costs.total_rev.toString(),
-        total_miles: costs.total_miles.toString(),
-        salary: costs.salary.toString(),
-        fuel: costs.fuel.toString(),
-        tolls: costs.tolls.toString(),
+        total_rev: (costs.total_rev || 0).toString(),
+        total_miles: (costs.total_miles || 0).toString(),
+        salary: (costs.salary || 0).toString(),
+        fuel: (costs.fuel || 0).toString(),
+        tolls: (costs.tolls || 0).toString(),
       });
     }
   }, [costs]);
@@ -53,8 +58,13 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Преобразуем YYYY-MM в YYYY-MM-DD для Django DateField
+    const periodMonth = formData.period_month.length === 7 
+      ? `${formData.period_month}-01` 
+      : formData.period_month;
+    
     const data: TruckVariableCostsCreate = {
-      period_month: formData.period_month,
+      period_month: periodMonth,
       truck: truckId,
       driver_name: formData.driver_name || undefined,
       total_rev: parseFloat(formData.total_rev) || 0,
@@ -64,6 +74,7 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
       tolls: parseFloat(formData.tolls) || 0,
     };
     
+    console.log('Отправляемые данные:', data);
     onSubmit(data);
   };
 
