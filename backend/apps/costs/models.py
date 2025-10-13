@@ -28,8 +28,8 @@ class FixedCostsTruck(models.Model):
     id = models.BigAutoField(primary_key=True)
     truck = models.ForeignKey(
         Truck, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        on_delete=models.CASCADE,
+        null=True,
         blank=True,
         verbose_name="Трак"
     )

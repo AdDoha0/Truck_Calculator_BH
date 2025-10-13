@@ -30,4 +30,10 @@ export const trucksApi = {
   deleteTruck: async (id: number): Promise<void> => {
     await apiClient.delete(`/trucks/${id}/`);
   },
+
+  // Получить полную информацию о траке (с затратами)
+  getTruckFullDetails: async (id: number): Promise<any> => {
+    const response = await apiClient.get(`/trucks/${id}/full-details/`);
+    return response.data;
+  },
 };

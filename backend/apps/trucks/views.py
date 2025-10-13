@@ -1,12 +1,16 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Truck
 from .serializers import TruckSerializer, TruckCreateSerializer
+from apps.costs.models import FixedCostsTruck, TruckVariableCosts
+from apps.costs.serializers import FixedCostsTruckSerializer, TruckVariableCostsSerializer
 
 
 class TruckViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]  # Разрешить доступ без аутентификации
     queryset = Truck.objects.all()
     serializer_class = TruckSerializer
     
@@ -52,3 +56,22 @@ class TruckViewSet(viewsets.ModelViewSet):
         truck = get_object_or_404(Truck, pk=pk)
         truck.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=True, methods=['get'], url_path='full-details')
+    def full_details(self, request, pk=None):
+        """Получить полную информацию о траке включая все затраты"""
+        truck = get_object_or_404(Truck, pk=pk)
+        truck_data = TruckSerializer(truck).data
+        
+        # Получить фиксированные затраты
+        try:
+            fixed_costs = FixedCostsTruck.objects.get(truck_id=pk)
+            truck_data['fixed_costs'] = FixedCostsTruckSerializer(fixed_costs).data
+        except FixedCostsTruck.DoesNotExist:
+            truck_data['fixed_costs'] = None
+        
+        # Получить переменные затраты
+        variable_costs = TruckVariableCosts.objects.filter(truck_id=pk).order_by('-period_month')
+        truck_data['variable_costs'] = TruckVariableCostsSerializer(variable_costs, many=True).data
+        
+        return Response(truck_data)

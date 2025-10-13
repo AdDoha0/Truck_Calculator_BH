@@ -45,6 +45,12 @@ class FixedCostsTruckViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         """Получить фиксированные стоимости по тракам"""
         queryset = self.get_queryset()
+        
+        # Фильтрация по траку
+        truck_id = request.query_params.get('truck_id')
+        if truck_id:
+            queryset = queryset.filter(truck_id=truck_id)
+        
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
@@ -55,6 +61,16 @@ class FixedCostsTruckViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'], url_path='by-truck/(?P<truck_id>[^/.]+)')
+    def by_truck(self, request, truck_id=None):
+        """Получить фиксированные затраты для конкретного трака"""
+        try:
+            fixed_costs = FixedCostsTruck.objects.get(truck_id=truck_id)
+            serializer = self.get_serializer(fixed_costs)
+            return Response(serializer.data)
+        except FixedCostsTruck.DoesNotExist:
+            return Response({}, status=status.HTTP_200_OK)
 
 
 class TruckVariableCostsViewSet(viewsets.ModelViewSet):

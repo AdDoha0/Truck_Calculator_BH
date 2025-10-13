@@ -17,7 +17,10 @@ const TruckFormSection: React.FC<TruckFormSectionProps> = ({
   onCancel,
 }) => {
   const createMutation = useApiMutation(trucksApi.createTruck);
-  const updateMutation = useApiMutation(trucksApi.updateTruck);
+  const updateMutation = useApiMutation(
+    (params: { id: number; data: TruckCreate }) => 
+      trucksApi.updateTruck(params.id, params.data)
+  );
 
   const handleSubmit = async (data: TruckCreate) => {
     try {
