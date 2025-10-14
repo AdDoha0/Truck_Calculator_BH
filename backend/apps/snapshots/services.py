@@ -226,3 +226,29 @@ class SnapshotService:
                 'physical_damage_insurance_trailer': 0,
             }
 
+    @staticmethod
+    def get_snapshot_details(snapshot: CostSnapshot) -> dict:
+        """Получить детали снимка: общие фикс-стоимости и по тракам."""
+        from .models import CostSnapshotTruck
+        
+        # Получаем общие затраты
+        common_costs = SnapshotService.get_common_costs_from_snapshot(snapshot)
+        
+        # Получаем затраты по тракам
+        truck_costs = CostSnapshotTruck.objects.filter(snapshot=snapshot)
+        trucks_data = []
+        for tc in truck_costs:
+            trucks_data.append({
+                'truck_id': tc.truck.id,
+                'truck_tractor_no': tc.truck.tractor_no,
+                'truck_payment': tc.truck_payment,
+                'trailer_payment': tc.trailer_payment,
+                'physical_damage_insurance_truck': tc.physical_damage_insurance_truck,
+                'physical_damage_insurance_trailer': tc.physical_damage_insurance_trailer,
+            })
+        
+        return {
+            'common': common_costs,
+            'trucks': trucks_data
+        }
+

@@ -82,5 +82,18 @@ export const costsApi = {
   deleteVariableCosts: async (id: number): Promise<void> => {
     await apiClient.delete(`/costs/variable/${id}/`);
   },
+
+  // Получить данные периода с снимком фиксированных затрат
+  getPeriodDataWithSnapshot: async (params: { 
+    period_month: string; 
+  }): Promise<{
+    variable_costs: TruckVariableCosts[];
+    fixed_costs: any;
+    common_costs: any;
+    snapshot: any;
+  }> => {
+    const response = await apiClient.get('/costs/variable/by_period_with_snapshot/', { params });
+    return response.data;
+  },
 };
 

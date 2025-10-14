@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../../shared/ui/Button';
 import Loader from '../../shared/ui/Loader';
 import ConfirmDialog from '../../shared/ui/ConfirmDialog';
@@ -12,9 +12,11 @@ import { trucksApi } from '../../features/trucks/api/trucksApi';
 const TruckDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const truckId = parseInt(id || '0');
+  const selectedPeriod = searchParams.get('period') || new Date().toISOString().slice(0, 16);
   const { data: truck, loading, refetch } = useApi(() => trucksApi.getTruck(truckId), [truckId]);
   const deleteMutation = useApiMutation(trucksApi.deleteTruck);
 
@@ -54,7 +56,7 @@ const TruckDetailPage: React.FC = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate('/trucks')}
+              onClick={() => navigate(`/trucks?period=${encodeURIComponent(selectedPeriod)}`)}
             >
               ← Назад
             </Button>
@@ -76,7 +78,7 @@ const TruckDetailPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TruckInfoSection truck={truck} onUpdate={refetch} />
-        <TruckFixedCostsSection truckId={truckId} />
+        <TruckFixedCostsSection truckId={truckId} selectedPeriod={selectedPeriod} />
       </div>
 
       <TruckVariableCostsSection truckId={truckId} />

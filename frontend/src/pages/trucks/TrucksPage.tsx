@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import TruckListSection from './sections/TruckListSection';
 import TruckFormSection from './sections/TruckFormSection';
 import TruckCostsTableSection from './sections/TruckCostsTableSection';
@@ -17,18 +17,28 @@ type ViewMode = 'cards' | 'table';
 
 const TrucksPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [editingTruck, setEditingTruck] = useState<Truck | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const periodFromUrl = searchParams.get('period');
+    return periodFromUrl || new Date().toISOString().slice(0, 16);
+  });
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; truck: Truck | null }>({
     isOpen: false,
     truck: null,
   });
 
   const { data: trucks, loading: trucksLoading, refetch: refetchTrucks } = useApi(trucksApi.getTrucks);
-  const { data: fixedCosts } = useApi(costsApi.getTruckFixedCosts);
-  const { data: variableCosts, refetch: refetchVariableCosts } = useApi(() => {
+  
+  // Получаем данные периода с снимком фиксированных затрат
+  const { data: periodData, refetch: refetchPeriodData } = useApi(() => {
+    // Если выбран "current", передаем как есть
+    if (selectedMonth === 'current') {
+      return costsApi.getPeriodDataWithSnapshot({ period_month: 'current' });
+    }
+    
     // Преобразуем выбранную дату в формат для API
     let periodParam = selectedMonth;
     if (periodParam.length === 19) { // YYYY-MM-DDTHH:MM:SS
@@ -36,8 +46,9 @@ const TrucksPage: React.FC = () => {
     } else if (periodParam.length === 16) { // YYYY-MM-DDTHH:MM
       periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
     }
-    return costsApi.getVariableCosts({ period_month: periodParam });
+    return costsApi.getPeriodDataWithSnapshot({ period_month: periodParam });
   }, [selectedMonth]);
+  
   const { data: periods } = useApi(costsApi.getPeriods);
   const deleteMutation = useApiMutation(trucksApi.deleteTruck);
 
@@ -81,13 +92,15 @@ const TrucksPage: React.FC = () => {
   };
 
   const handleViewDetails = (truck: Truck) => {
-    navigate(`/trucks/${truck.id}`);
+    navigate(`/trucks/${truck.id}?period=${encodeURIComponent(selectedMonth)}`);
   };
 
   // Объединяем данные траков с затратами
   const trucksWithCosts = trucks?.map(truck => {
-    const truckFixedCosts = fixedCosts?.find(fc => fc.truck === truck.id);
-    const truckVariableCosts = variableCosts?.find(vc => vc.truck === truck.id);
+    // Получаем фиксированные затраты из снимка
+    const truckFixedCosts = periodData?.fixed_costs?.trucks?.find((tc: any) => tc.truck_id === truck.id);
+    // Получаем переменные затраты за период
+    const truckVariableCosts = periodData?.variable_costs?.find((vc: any) => vc.truck === truck.id);
     return {
       ...truck,
       fixed_costs: truckFixedCosts,
@@ -126,6 +139,22 @@ const TrucksPage: React.FC = () => {
               <p className="text-secondary-600 mt-1">
                 Управление траками и их данными
               </p>
+              {periodData?.snapshot ? (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-medium">Снимок фиксированных затрат:</span> {periodData.snapshot.label || 'Автоматический снимок'} 
+                    <span className="text-blue-600 ml-2">
+                      (создан: {new Date(periodData.snapshot.snapshot_at).toLocaleString('ru-RU')})
+                    </span>
+                  </p>
+                </div>
+              ) : selectedMonth === 'current' ? (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <span className="font-medium">Текущие данные:</span> Отображаются актуальные фиксированные затраты на данный момент
+                  </p>
+                </div>
+              ) : null}
             </div>
             <Button
               onClick={() => setShowForm(true)}
@@ -225,7 +254,10 @@ const TrucksPage: React.FC = () => {
         </div>
 
         <div className="w-80">
-          <CommonCostsSection />
+          <CommonCostsSection 
+            snapshotCommonCosts={periodData?.common_costs}
+            isFromSnapshot={!!periodData?.snapshot}
+          />
         </div>
       </div>
 
