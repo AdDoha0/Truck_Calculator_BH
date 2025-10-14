@@ -35,6 +35,6 @@ class SnapshotComparisonSerializer(serializers.Serializer):
 
 class CreateSnapshotSerializer(serializers.Serializer):
     """Сериализатор для создания снимка"""
-    period_date = serializers.DateField()
+    period_date = serializers.DateTimeField()
     label = serializers.CharField(max_length=255, required=False, allow_blank=True)
 

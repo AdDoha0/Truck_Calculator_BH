@@ -15,7 +15,7 @@ const TruckDetailPage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const truckId = parseInt(id || '0');
-  const { data: truck, loading, refetch } = useApi(() => trucksApi.getTruck(truckId));
+  const { data: truck, loading, refetch } = useApi(() => trucksApi.getTruck(truckId), [truckId]);
   const deleteMutation = useApiMutation(trucksApi.deleteTruck);
 
   const handleDelete = async () => {

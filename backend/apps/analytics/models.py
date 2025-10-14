@@ -11,7 +11,7 @@ class ProfitabilityCalculation(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Трак"
     )
-    period_month = models.DateField(verbose_name="Период")
+    period_month = models.DateTimeField(verbose_name="Период (дата и время)")
     
     # Исходные данные
     total_revenue = models.DecimalField(
@@ -82,7 +82,7 @@ class ProfitabilityCalculation(models.Model):
         ordering = ['-period_month', 'truck']
     
     def __str__(self):
-        return f"Расчет прибыльности {self.truck} за {self.period_month.strftime('%Y-%m')}"
+        return f"Расчет прибыльности {self.truck} за {self.period_month.strftime('%d.%m.%Y %H:%M')}"
     
     @classmethod
     def calculate_profitability(

@@ -92,9 +92,16 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
             # Если period_month приходит как массив, берем первый элемент
             if isinstance(period_month, list):
                 period_month = period_month[0]
-            # Добавляем день для корректного сравнения с DateField
+            
+            # Обрабатываем различные форматы дат
             if len(period_month) == 7:  # YYYY-MM формат
-                period_month = f"{period_month}-01"
+                period_month = f"{period_month}-01T00:00:00"
+            elif len(period_month) == 10:  # YYYY-MM-DD формат
+                period_month = f"{period_month}T00:00:00"
+            elif len(period_month) == 16:  # YYYY-MM-DDTHH:MM формат
+                period_month = f"{period_month}:00"
+            
+            # Фильтруем по точному совпадению даты и времени
             queryset = queryset.filter(period_month=period_month)
         
         # Фильтрация по траку
@@ -121,3 +128,21 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def periods(self, request):
+        """Получить список всех уникальных периодов из базы данных"""
+        # Получаем все уникальные периоды из переменных затрат
+        periods = TruckVariableCosts.objects.values_list('period_month', flat=True).distinct().order_by('-period_month')
+        
+        # Форматируем периоды для отображения
+        formatted_periods = []
+        for period in periods:
+            formatted_periods.append({
+                'value': period.isoformat(),
+                'label': period.strftime('%d %B %Y г.'),
+                'date': period.date().isoformat(),
+                'datetime': period.isoformat()
+            })
+        
+        return Response(formatted_periods)

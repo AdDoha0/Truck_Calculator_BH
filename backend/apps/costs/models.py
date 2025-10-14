@@ -74,7 +74,7 @@ class FixedCostsTruck(models.Model):
 class TruckVariableCosts(models.Model):
     """Переменные (нефиксированные) данные по тракам"""
     id = models.BigAutoField(primary_key=True)
-    period_month = models.DateField(verbose_name="Период (месяц)")
+    period_month = models.DateTimeField(verbose_name="Период (дата и время)")
     truck = models.ForeignKey(
         Truck, 
         on_delete=models.CASCADE, 
@@ -128,4 +128,4 @@ class TruckVariableCosts(models.Model):
         ordering = ['-period_month', 'truck']
     
     def __str__(self):
-        return f"{self.truck} - {self.period_month.strftime('%Y-%m')}"
+        return f"{self.truck} - {self.period_month.strftime('%d.%m.%Y %H:%M')}"

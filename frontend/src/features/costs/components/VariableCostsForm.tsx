@@ -19,7 +19,7 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
   loading = false,
 }) => {
   const [formData, setFormData] = useState({
-    period_month: new Date().toISOString().slice(0, 7),
+    period_month: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM
     driver_name: '',
     total_rev: '0',
     total_miles: '0',
@@ -30,10 +30,21 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
 
   useEffect(() => {
     if (costs) {
-      // Преобразуем YYYY-MM-DD в YYYY-MM для input type="month"
-      const periodMonth = costs.period_month.length > 7 
-        ? costs.period_month.slice(0, 7) 
-        : costs.period_month;
+      // Преобразуем дату в формат для datetime-local input
+      let periodMonth = costs.period_month;
+      
+      // Если дата в формате YYYY-MM-DD, добавляем время
+      if (periodMonth.length === 10) {
+        periodMonth = `${periodMonth}T00:00`;
+      }
+      // Если дата в формате YYYY-MM, добавляем день и время
+      else if (periodMonth.length === 7) {
+        periodMonth = `${periodMonth}-01T00:00`;
+      }
+      // Если дата уже в формате YYYY-MM-DDTHH:MM:SS, обрезаем до YYYY-MM-DDTHH:MM
+      else if (periodMonth.length === 19) {
+        periodMonth = periodMonth.slice(0, 16);
+      }
         
       setFormData({
         period_month: periodMonth,
@@ -58,10 +69,13 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Преобразуем YYYY-MM в YYYY-MM-DD для Django DateField
-    const periodMonth = formData.period_month.length === 7 
-      ? `${formData.period_month}-01` 
-      : formData.period_month;
+    // Преобразуем YYYY-MM-DDTHH:MM в YYYY-MM-DDTHH:MM:SS для Django DateTimeField
+    let periodMonth = formData.period_month;
+    
+    // Если время не указано, добавляем секунды
+    if (periodMonth.length === 16) {
+      periodMonth = `${periodMonth}:00`;
+    }
     
     const data: TruckVariableCostsCreate = {
       period_month: periodMonth,
@@ -81,9 +95,9 @@ const VariableCostsForm: React.FC<VariableCostsFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
-        label="Период (месяц)"
+        label="Период (дата и время)"
         name="period_month"
-        type="month"
+        type="datetime-local"
         value={formData.period_month}
         onChange={handleChange}
         required

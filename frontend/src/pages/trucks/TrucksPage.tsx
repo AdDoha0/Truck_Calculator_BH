@@ -20,7 +20,7 @@ const TrucksPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTruck, setEditingTruck] = useState<Truck | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 16));
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; truck: Truck | null }>({
     isOpen: false,
     truck: null,
@@ -28,8 +28,25 @@ const TrucksPage: React.FC = () => {
 
   const { data: trucks, loading: trucksLoading, refetch: refetchTrucks } = useApi(trucksApi.getTrucks);
   const { data: fixedCosts } = useApi(costsApi.getTruckFixedCosts);
-  const { data: variableCosts } = useApi(() => costsApi.getVariableCosts({ period_month: selectedMonth }));
+  const { data: variableCosts, refetch: refetchVariableCosts } = useApi(() => {
+    // Преобразуем выбранную дату в формат для API
+    let periodParam = selectedMonth;
+    if (periodParam.length === 19) { // YYYY-MM-DDTHH:MM:SS
+      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
+    } else if (periodParam.length === 16) { // YYYY-MM-DDTHH:MM
+      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
+    }
+    return costsApi.getVariableCosts({ period_month: periodParam });
+  }, [selectedMonth]);
+  const { data: periods } = useApi(costsApi.getPeriods);
   const deleteMutation = useApiMutation(trucksApi.deleteTruck);
+
+  // Инициализируем выбранный период первым доступным из базы данных
+  React.useEffect(() => {
+    if (periods && periods.length > 0 && selectedMonth === new Date().toISOString().slice(0, 16)) {
+      setSelectedMonth(periods[0].value);
+    }
+  }, [periods, selectedMonth]);
 
   const handleEdit = (truck: Truck) => {
     setEditingTruck(truck);
@@ -79,6 +96,15 @@ const TrucksPage: React.FC = () => {
   }) || [];
 
   const monthOptions = React.useMemo(() => {
+    // Если есть периоды из базы данных, используем их
+    if (periods && periods.length > 0) {
+      return periods.map(period => ({
+        value: period.value,
+        label: period.label
+      }));
+    }
+    
+    // Fallback: генерируем месяцы как раньше
     const months = [];
     const now = new Date();
     for (let i = 0; i < 12; i++) {
@@ -88,7 +114,7 @@ const TrucksPage: React.FC = () => {
       months.push({ value, label });
     }
     return months;
-  }, []);
+  }, [periods]);
 
   return (
     <div className="space-y-6">
@@ -148,7 +174,18 @@ const TrucksPage: React.FC = () => {
                 label="Период"
                 options={monthOptions}
                 value={selectedMonth}
-                onChange={(value) => setSelectedMonth(value)}
+                onChange={(value) => {
+                  // Если выбран период из базы данных, используем его полное значение
+                  if (periods && periods.length > 0) {
+                    const selectedPeriod = periods.find(p => p.value === value);
+                    if (selectedPeriod) {
+                      setSelectedMonth(selectedPeriod.value);
+                      return;
+                    }
+                  }
+                  // Fallback для сгенерированных месяцев
+                  setSelectedMonth(value);
+                }}
                 className="w-48"
               />
             </div>

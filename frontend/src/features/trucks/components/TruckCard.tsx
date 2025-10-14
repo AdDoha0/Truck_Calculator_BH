@@ -1,6 +1,7 @@
 import React from 'react';
 import Button from '../../../shared/ui/Button';
 import type { Truck, TruckVariableCosts, FixedCostsTruck } from '../../../types';
+import { formatPeriodDate, formatPreviousPeriodDate } from '../../../utils/dateUtils';
 
 interface TruckCardProps {
   truck: Truck;
@@ -63,7 +64,9 @@ const TruckCard: React.FC<TruckCardProps> = ({
           <div>
             <p className="text-xs text-secondary-500">Период расчета</p>
             <p className="text-sm font-medium">
-              {variableCosts?.period_month ? new Date(variableCosts.period_month).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' }) : 'Месячный'}
+              {variableCosts?.period_month 
+                ? formatPeriodDate(variableCosts.period_month, { includeTime: true, monthFormat: 'long' })
+                : 'Месячный'}
             </p>
           </div>
           <div>
@@ -76,7 +79,7 @@ const TruckCard: React.FC<TruckCardProps> = ({
           <div className="pt-2 border-t border-secondary-100">
             <p className="text-xs text-secondary-500">Предыдущий период</p>
             <p className="text-sm font-medium">
-              {new Date(new Date(variableCosts.period_month).setMonth(new Date(variableCosts.period_month).getMonth() - 1)).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' })}
+              {formatPreviousPeriodDate(variableCosts.period_month, { includeTime: true, monthFormat: 'long' })}
             </p>
             {variableCosts.driver_name && (
               <p className="text-xs text-secondary-600 mt-1">Водитель: {variableCosts.driver_name}</p>

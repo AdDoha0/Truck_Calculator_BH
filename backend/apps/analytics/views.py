@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from datetime import date
+from datetime import date, datetime
 from .models import ProfitabilityCalculation
 from .serializers import (
     ProfitabilityCalculationSerializer,
@@ -27,10 +27,15 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
             )
         
         try:
-            period_date = date.fromisoformat(period_month)
+            if len(period_month) == 7:  # YYYY-MM
+                period_date = datetime.fromisoformat(f"{period_month}-01T00:00:00")
+            elif len(period_month) == 10:  # YYYY-MM-DD
+                period_date = datetime.fromisoformat(f"{period_month}T00:00:00")
+            else:  # YYYY-MM-DDTHH:MM:SS
+                period_date = datetime.fromisoformat(period_month)
         except ValueError:
             return Response(
-                {'error': 'Неверный формат даты. Используйте YYYY-MM-DD'},
+                {'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -49,10 +54,15 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
             )
         
         try:
-            period_date = date.fromisoformat(period_month)
+            if len(period_month) == 7:  # YYYY-MM
+                period_date = datetime.fromisoformat(f"{period_month}-01T00:00:00")
+            elif len(period_month) == 10:  # YYYY-MM-DD
+                period_date = datetime.fromisoformat(f"{period_month}T00:00:00")
+            else:  # YYYY-MM-DDTHH:MM:SS
+                period_date = datetime.fromisoformat(period_month)
         except ValueError:
             return Response(
-                {'error': 'Неверный формат даты. Используйте YYYY-MM-DD'},
+                {'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -73,11 +83,22 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
             )
         
         try:
-            start = date.fromisoformat(start_date)
-            end = date.fromisoformat(end_date)
+            if len(start_date) == 7:  # YYYY-MM
+                start = datetime.fromisoformat(f"{start_date}-01T00:00:00")
+            elif len(start_date) == 10:  # YYYY-MM-DD
+                start = datetime.fromisoformat(f"{start_date}T00:00:00")
+            else:  # YYYY-MM-DDTHH:MM:SS
+                start = datetime.fromisoformat(start_date)
+                
+            if len(end_date) == 7:  # YYYY-MM
+                end = datetime.fromisoformat(f"{end_date}-01T00:00:00")
+            elif len(end_date) == 10:  # YYYY-MM-DD
+                end = datetime.fromisoformat(f"{end_date}T00:00:00")
+            else:  # YYYY-MM-DDTHH:MM:SS
+                end = datetime.fromisoformat(end_date)
         except ValueError:
             return Response(
-                {'error': 'Неверный формат даты. Используйте YYYY-MM-DD'},
+                {'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -95,10 +116,15 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
             )
         
         try:
-            period_date = date.fromisoformat(period_month)
+            if len(period_month) == 7:  # YYYY-MM
+                period_date = datetime.fromisoformat(f"{period_month}-01T00:00:00")
+            elif len(period_month) == 10:  # YYYY-MM-DD
+                period_date = datetime.fromisoformat(f"{period_month}T00:00:00")
+            else:  # YYYY-MM-DDTHH:MM:SS
+                period_date = datetime.fromisoformat(period_month)
         except ValueError:
             return Response(
-                {'error': 'Неверный формат даты. Используйте YYYY-MM-DD'},
+                {'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -114,11 +140,16 @@ class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
         period_month = request.query_params.get('period_month')
         if period_month:
             try:
-                period_date = date.fromisoformat(period_month)
+                if len(period_month) == 7:  # YYYY-MM
+                    period_date = datetime.fromisoformat(f"{period_month}-01T00:00:00")
+                elif len(period_month) == 10:  # YYYY-MM-DD
+                    period_date = datetime.fromisoformat(f"{period_month}T00:00:00")
+                else:  # YYYY-MM-DDTHH:MM:SS
+                    period_date = datetime.fromisoformat(period_month)
                 queryset = queryset.filter(period_month=period_date)
             except ValueError:
                 return Response(
-                    {'error': 'Неверный формат даты. Используйте YYYY-MM-DD'},
+                    {'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
         

@@ -53,6 +53,17 @@ export const costsApi = {
     return response.data;
   },
 
+  // Получить список периодов
+  getPeriods: async (): Promise<Array<{
+    value: string;
+    label: string;
+    date: string;
+    datetime: string;
+  }>> => {
+    const response = await apiClient.get('/costs/variable/periods/');
+    return response.data;
+  },
+
   getVariableCost: async (id: number): Promise<TruckVariableCosts> => {
     const response = await apiClient.get(`/costs/variable/${id}/`);
     return response.data;

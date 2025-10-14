@@ -22,7 +22,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
     costs: null,
   });
 
-  const { data: variableCosts, loading, refetch } = useApi(() => costsApi.getVariableCosts({ truck_id: truckId }));
+  const { data: variableCosts, loading, refetch } = useApi(() => costsApi.getVariableCosts({ truck_id: truckId }), [truckId]);
   const createMutation = useApiMutation(costsApi.createVariableCosts);
   const updateMutation = useApiMutation((params: { id: number; data: TruckVariableCostsCreate }) =>
     costsApi.updateVariableCosts(params.id, params.data)
@@ -34,11 +34,29 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       if (editingCosts?.id) {
         await updateMutation.mutate({ id: editingCosts.id, data });
       } else {
-        // Проверяем, есть ли уже запись для этого трака и месяца
+        // Проверяем, есть ли уже запись для этого трака и периода
         const existingRecord = variableCosts?.find(cost => {
           // Нормализуем даты для сравнения
-          const existingDate = cost.period_month.length === 7 ? `${cost.period_month}-01` : cost.period_month;
-          const newDate = data.period_month.length === 7 ? `${data.period_month}-01` : data.period_month;
+          let existingDate = cost.period_month;
+          let newDate = data.period_month;
+          
+          // Приводим к единому формату YYYY-MM-DDTHH:MM:SS
+          if (existingDate.length === 7) {
+            existingDate = `${existingDate}-01T00:00:00`;
+          } else if (existingDate.length === 10) {
+            existingDate = `${existingDate}T00:00:00`;
+          } else if (existingDate.length === 16) {
+            existingDate = `${existingDate}:00`;
+          }
+          
+          if (newDate.length === 7) {
+            newDate = `${newDate}-01T00:00:00`;
+          } else if (newDate.length === 10) {
+            newDate = `${newDate}T00:00:00`;
+          } else if (newDate.length === 16) {
+            newDate = `${newDate}:00`;
+          }
+          
           return cost.truck === data.truck && existingDate === newDate;
         });
         
@@ -91,9 +109,28 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       sortable: true,
       render: (value: string) => {
         try {
-          // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
-          const dateValue = value.length === 7 ? `${value}-01` : value;
-          return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+          // Обрабатываем различные форматы дат
+          let dateValue = value;
+          
+          if (value.length === 7) {
+            // YYYY-MM -> YYYY-MM-01T00:00:00
+            dateValue = `${value}-01T00:00:00`;
+          } else if (value.length === 10) {
+            // YYYY-MM-DD -> YYYY-MM-DDTHH:MM:SS
+            dateValue = `${value}T00:00:00`;
+          } else if (value.length === 16) {
+            // YYYY-MM-DDTHH:MM -> YYYY-MM-DDTHH:MM:SS
+            dateValue = `${value}:00`;
+          }
+          
+          const date = new Date(dateValue);
+          return date.toLocaleString('ru-RU', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
         } catch {
           return value;
         }
@@ -195,11 +232,25 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
         title="Удалить переменные затраты?"
         message={`Вы уверены, что хотите удалить данные за период ${deleteConfirm.costs?.period_month ? (() => {
           try {
-            // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
-            const dateValue = deleteConfirm.costs.period_month.length === 7 
-              ? `${deleteConfirm.costs.period_month}-01` 
-              : deleteConfirm.costs.period_month;
-            return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+            // Обрабатываем различные форматы дат
+            let dateValue = deleteConfirm.costs.period_month;
+            
+            if (dateValue.length === 7) {
+              dateValue = `${dateValue}-01T00:00:00`;
+            } else if (dateValue.length === 10) {
+              dateValue = `${dateValue}T00:00:00`;
+            } else if (dateValue.length === 16) {
+              dateValue = `${dateValue}:00`;
+            }
+            
+            const date = new Date(dateValue);
+            return date.toLocaleString('ru-RU', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
           } catch {
             return deleteConfirm.costs.period_month;
           }

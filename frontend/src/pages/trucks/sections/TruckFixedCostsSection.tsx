@@ -13,7 +13,7 @@ interface TruckFixedCostsSectionProps {
 
 const TruckFixedCostsSection: React.FC<TruckFixedCostsSectionProps> = ({ truckId }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { data: fixedCosts, loading, refetch } = useApi(() => costsApi.getTruckFixedCostsByTruckId(truckId));
+  const { data: fixedCosts, loading, refetch } = useApi(() => costsApi.getTruckFixedCostsByTruckId(truckId), [truckId]);
   const createMutation = useApiMutation(costsApi.createTruckFixedCosts);
   const updateMutation = useApiMutation((params: { id: number; data: FixedCostsTruckCreate }) =>
     costsApi.updateTruckFixedCosts(params.id, params.data)

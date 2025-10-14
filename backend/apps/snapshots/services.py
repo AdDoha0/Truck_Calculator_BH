@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
-from datetime import date
+from datetime import date, datetime
 from .models import CostSnapshot, CostSnapshotCommon, CostSnapshotTruck
 from apps.costs.models import FixedCostsCommon, FixedCostsTruck
 from apps.trucks.models import Truck
@@ -11,7 +11,7 @@ class SnapshotService:
     
     @staticmethod
     @transaction.atomic
-    def create_snapshot(period_date: date, label: str = None) -> CostSnapshot:
+    def create_snapshot(period_date: datetime, label: str = None) -> CostSnapshot:
         """
         Создать снимок текущего состояния фиксированных стоимостей
         
@@ -178,4 +178,51 @@ class SnapshotService:
             
         except CostSnapshot.DoesNotExist:
             return False
+
+    @staticmethod
+    def get_latest_snapshot_for_period(period_date: datetime) -> CostSnapshot | None:
+        """Вернуть последний снимок с period_date <= указанной дате периода.
+
+        При равенстве нескольких по period_date приоритет по времени создания (snapshot_at).
+        """
+        return (
+            CostSnapshot.objects
+            .filter(period_date__lte=period_date)
+            .order_by('-period_date', '-snapshot_at')
+            .first()
+        )
+
+    @staticmethod
+    def get_common_costs_from_snapshot(snapshot: CostSnapshot) -> dict:
+        """Извлечь общие фиксированные стоимости из снимка в виде словаря."""
+        try:
+            common = CostSnapshotCommon.objects.get(snapshot=snapshot)
+            return {
+                'ifta': common.ifta,
+                'insurance': common.insurance,
+                'eld': common.eld,
+                'tablet': common.tablet,
+                'tolls': common.tolls,
+            }
+        except CostSnapshotCommon.DoesNotExist:
+            return {'ifta': 0, 'insurance': 0, 'eld': 0, 'tablet': 0, 'tolls': 0}
+
+    @staticmethod
+    def get_truck_costs_from_snapshot(snapshot: CostSnapshot, truck: Truck) -> dict:
+        """Извлечь фиксированные стоимости по траку из снимка в виде словаря."""
+        try:
+            tc = CostSnapshotTruck.objects.get(snapshot=snapshot, truck=truck)
+            return {
+                'truck_payment': tc.truck_payment,
+                'trailer_payment': tc.trailer_payment,
+                'physical_damage_insurance_truck': tc.physical_damage_insurance_truck,
+                'physical_damage_insurance_trailer': tc.physical_damage_insurance_trailer,
+            }
+        except CostSnapshotTruck.DoesNotExist:
+            return {
+                'truck_payment': 0,
+                'trailer_payment': 0,
+                'physical_damage_insurance_truck': 0,
+                'physical_damage_insurance_trailer': 0,
+            }
 

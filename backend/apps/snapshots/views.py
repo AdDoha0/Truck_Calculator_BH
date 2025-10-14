@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import date
+from datetime import date, datetime
 from .models import CostSnapshot
 from .serializers import (
     CostSnapshotSerializer, 
@@ -75,12 +75,70 @@ class CostSnapshotViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def create_current(self, request):
-        """Создать снимок текущего состояния с сегодняшней датой"""
-        period_date = request.data.get('period_date', timezone.now().date())
-        label = request.data.get('label', f'Снимок от {timezone.now().strftime("%d.%m.%Y %H:%M")}')
+        """Создать снимок текущего состояния с текущей датой и временем"""
+        period_date = request.data.get('period_date', timezone.now())
+        label = request.data.get('label', f'Снимок от {timezone.now().strftime("%d.%m.%Y %H:%M:%S")}')
         
         snapshot = SnapshotService.create_snapshot(period_date, label)
         return Response(
             CostSnapshotSerializer(snapshot).data,
             status=status.HTTP_201_CREATED
         )
+
+    @action(detail=False, methods=['get'])
+    def by_period(self, request):
+        """Найти последний снимок с period_date <= указанного периода.
+
+        query param: period_month = YYYY-MM | YYYY-MM-DD | YYYY-MM-DDTHH:MM:SS
+        """
+        period_month = request.query_params.get('period_month')
+        if not period_month:
+            return Response({'error': 'Необходимо указать period_month'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Принимаем YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS
+            if len(period_month) == 7:
+                period_date = datetime.fromisoformat(f"{period_month}-01T00:00:00")
+            elif len(period_month) == 10:
+                period_date = datetime.fromisoformat(f"{period_month}T00:00:00")
+            else:
+                period_date = datetime.fromisoformat(period_month)
+        except ValueError:
+            return Response({'error': 'Неверный формат даты. Используйте YYYY-MM, YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS'}, status=status.HTTP_400_BAD_REQUEST)
+
+        snapshot = SnapshotService.get_latest_snapshot_for_period(period_date)
+        if not snapshot:
+            return Response({'detail': 'Снимок не найден'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CostSnapshotSerializer(snapshot).data)
+
+    @action(detail=True, methods=['get'])
+    def details(self, request, pk=None):
+        """Детали снимка: общие фикс-стоимости и по тракам (опционально по одному траку).
+
+        query param: truck_id (optional)
+        """
+        snapshot = get_object_or_404(CostSnapshot, pk=pk)
+
+        truck_id = request.query_params.get('truck_id')
+        common = SnapshotService.get_common_costs_from_snapshot(snapshot)
+
+        from .models import CostSnapshotTruck
+        truck_costs_qs = CostSnapshotTruck.objects.filter(snapshot=snapshot)
+        if truck_id:
+            truck_costs_qs = truck_costs_qs.filter(truck_id=truck_id)
+
+        data = {
+            'snapshot': CostSnapshotSerializer(snapshot).data,
+            'common': common,
+            'trucks': [
+                {
+                    'truck_id': t.truck.id,
+                    'truck_tractor_no': t.truck.tractor_no,
+                    'truck_payment': t.truck_payment,
+                    'trailer_payment': t.trailer_payment,
+                    'physical_damage_insurance_truck': t.physical_damage_insurance_truck,
+                    'physical_damage_insurance_trailer': t.physical_damage_insurance_trailer,
+                }
+                for t in truck_costs_qs
+            ]
+        }
+        return Response(data)

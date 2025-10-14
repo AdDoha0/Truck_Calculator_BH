@@ -3,6 +3,7 @@ import Table from '../../../shared/ui/Table';
 import Button from '../../../shared/ui/Button';
 import type { TableColumn } from '../../../shared/ui/types';
 import type { Truck } from '../../../types';
+import { formatPeriodDate } from '../../../utils/dateUtils';
 
 interface TruckWithCosts extends Truck {
   fixed_costs?: {
@@ -57,17 +58,10 @@ const TruckCostsTableSection: React.FC<TruckCostsTableSectionProps> = ({
       key: 'latest_variable_costs',
       title: 'Период',
       render: (_, truck) => truck.latest_variable_costs?.period_month 
-        ? (() => {
-            try {
-              // Если дата в формате YYYY-MM, добавляем день для корректного парсинга
-              const dateValue = truck.latest_variable_costs.period_month.length === 7 
-                ? `${truck.latest_variable_costs.period_month}-01` 
-                : truck.latest_variable_costs.period_month;
-              return new Date(dateValue).toLocaleDateString('ru-RU', { year: 'numeric', month: 'short' });
-            } catch {
-              return truck.latest_variable_costs.period_month;
-            }
-          })()
+        ? formatPeriodDate(truck.latest_variable_costs.period_month, { 
+            includeTime: true, 
+            monthFormat: 'short' 
+          })
         : '-',
     },
     {

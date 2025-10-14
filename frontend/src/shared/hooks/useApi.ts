@@ -12,6 +12,7 @@ interface UseApiOptions {
 
 export function useApi<T>(
   apiCall: () => Promise<T>,
+  deps: any[] = [],
   options: UseApiOptions = { immediate: true }
 ) {
   const [state, setState] = useState<UseApiState<T>>({
@@ -38,7 +39,7 @@ export function useApi<T>(
     if (options.immediate) {
       execute();
     }
-  }, []);
+  }, deps);
 
   return {
     ...state,

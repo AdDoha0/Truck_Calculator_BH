@@ -18,7 +18,7 @@ class CostSnapshot(models.Model):
     
     def __str__(self):
         label_text = f" ({self.label})" if self.label else ""
-        return f"Снимок от {self.snapshot_at.strftime('%d.%m.%Y %H:%M')}{label_text}"
+        return f"Снимок от {self.snapshot_at.strftime('%d.%m.%Y %H:%M:%S')}{label_text}"
 
 
 class CostSnapshotCommon(models.Model):
