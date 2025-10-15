@@ -68,6 +68,28 @@ export interface TruckVariableCostsCreate {
   cost_snapshot?: number;
 }
 
+// Текущие переменные затраты (без привязки к периоду)
+export interface TruckCurrentVariableCosts extends BaseEntity {
+  truck: number;
+  truck_tractor_no?: string;
+  driver_name?: string;
+  total_rev: number;
+  total_miles: number;
+  salary: number;
+  fuel: number;
+  tolls: number;
+}
+
+export interface TruckCurrentVariableCostsCreate {
+  truck: number;
+  driver_name?: string;
+  total_rev: number;
+  total_miles: number;
+  salary: number;
+  fuel: number;
+  tolls: number;
+}
+
 // Снимки
 export interface CostSnapshot extends BaseEntity {
   snapshot_at: string;

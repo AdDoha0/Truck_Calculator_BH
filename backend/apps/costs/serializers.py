@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from datetime import date, datetime
-from .models import FixedCostsCommon, FixedCostsTruck, TruckVariableCosts
+from .models import FixedCostsCommon, FixedCostsTruck, TruckVariableCosts, TruckCurrentVariableCosts
 from apps.trucks.models import Truck
 from apps.snapshots.services import SnapshotService
 
@@ -31,9 +31,9 @@ class TruckVariableCostsSerializer(serializers.ModelSerializer):
     class Meta:
         model = TruckVariableCosts
         fields = [
-            'id', 'period_month', 'truck', 'truck_tractor_no', 'driver_name',
+            'id', 'snapshot', 'truck', 'truck_tractor_no', 'driver_name',
             'total_rev', 'total_miles', 'salary', 'fuel', 'tolls',
-            'cost_snapshot', 'created_at', 'updated_at'
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'truck_tractor_no', 'created_at', 'updated_at']
 
@@ -42,25 +42,30 @@ class TruckVariableCostsCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TruckVariableCosts
         fields = [
-            'period_month', 'truck', 'driver_name',
-            'total_rev', 'total_miles', 'salary', 'fuel', 'tolls',
-            'cost_snapshot'
+            'snapshot', 'truck', 'driver_name',
+            'total_rev', 'total_miles', 'salary', 'fuel', 'tolls'
         ]
+    # никаких периодов: привязка только через snapshot
 
-    def validate(self, attrs):
-        period = attrs.get('period_month')
-        if isinstance(period, str):
-            if len(period) == 7:  # YYYY-MM
-                attrs['period_month'] = datetime.fromisoformat(f"{period}-01T00:00:00")
-            elif len(period) == 10:  # YYYY-MM-DD
-                attrs['period_month'] = datetime.fromisoformat(f"{period}T00:00:00")
-        return attrs
 
-    def create(self, validated_data):
-        snapshot = validated_data.get('cost_snapshot')
-        period_month = validated_data['period_month']
-        if snapshot is None:
-            snapshot = SnapshotService.get_latest_snapshot_for_period(period_month)
-            validated_data['cost_snapshot'] = snapshot
-        return super().create(validated_data)
+class TruckCurrentVariableCostsSerializer(serializers.ModelSerializer):
+    truck_tractor_no = serializers.CharField(source='truck.tractor_no', read_only=True)
+    
+    class Meta:
+        model = TruckCurrentVariableCosts
+        fields = [
+            'id', 'truck', 'truck_tractor_no', 'driver_name',
+            'total_rev', 'total_miles', 'salary', 'fuel', 'tolls',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'truck_tractor_no', 'created_at', 'updated_at']
+
+
+class TruckCurrentVariableCostsCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TruckCurrentVariableCosts
+        fields = [
+            'truck', 'driver_name', 'total_rev', 'total_miles', 
+            'salary', 'fuel', 'tolls'
+        ]
 

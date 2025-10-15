@@ -11,6 +11,7 @@ import ConfirmDialog from '../../shared/ui/ConfirmDialog';
 import { useApi, useApiMutation } from '../../shared/hooks/useApi';
 import { trucksApi } from '../../features/trucks/api/trucksApi';
 import { costsApi } from '../../features/costs/api/costsApi';
+import { snapshotsApi } from '../../features/snapshots/api/snapshotsApi';
 import type { Truck } from '../../types';
 
 type ViewMode = 'cards' | 'table';
@@ -29,14 +30,19 @@ const TrucksPage: React.FC = () => {
     isOpen: false,
     truck: null,
   });
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [snapshotData, setSnapshotData] = useState({
+    period_date: new Date().toISOString().slice(0, 10),
+    label: ''
+  });
 
   const { data: trucks, loading: trucksLoading, refetch: refetchTrucks } = useApi(trucksApi.getTrucks);
   
   // Получаем данные периода с снимком фиксированных затрат
   const { data: periodData, refetch: refetchPeriodData } = useApi(() => {
-    // Если выбран "current", передаем как есть
+    // Если выбран "current", получаем текущие данные
     if (selectedMonth === 'current') {
-      return costsApi.getPeriodDataWithSnapshot({ period_month: 'current' });
+      return costsApi.getCurrentData();
     }
     
     // Преобразуем выбранную дату в формат для API
@@ -51,6 +57,7 @@ const TrucksPage: React.FC = () => {
   
   const { data: periods } = useApi(costsApi.getPeriods);
   const deleteMutation = useApiMutation(trucksApi.deleteTruck);
+  const createSnapshotMutation = useApiMutation(snapshotsApi.createFromCurrentData);
 
   // Инициализируем выбранный период первым доступным из базы данных
   React.useEffect(() => {
@@ -77,6 +84,21 @@ const TrucksPage: React.FC = () => {
       refetchTrucks();
     } catch (error) {
       console.error('Ошибка при удалении трака:', error);
+    }
+  };
+
+  const handleCreateSnapshot = async () => {
+    try {
+      await createSnapshotMutation.mutate(snapshotData);
+      setShowSnapshotModal(false);
+      setSnapshotData({ period_date: new Date().toISOString().slice(0, 10), label: '' });
+      // Обновляем данные и переключаемся на новый период
+      refetchPeriodData();
+      // Можно добавить уведомление об успехе
+      alert('Снимок успешно создан!');
+    } catch (error) {
+      console.error('Error creating snapshot:', error);
+      alert('Ошибка при создании снимка');
     }
   };
 
@@ -155,6 +177,18 @@ const TrucksPage: React.FC = () => {
                   </p>
                 </div>
               ) : null}
+              
+              {selectedMonth === 'current' && (
+                <div className="mt-3">
+                  <Button
+                    onClick={() => setShowSnapshotModal(true)}
+                    variant="primary"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    📸 Сохранить период
+                  </Button>
+                </div>
+              )}
             </div>
             <Button
               onClick={() => setShowForm(true)}
@@ -260,6 +294,69 @@ const TrucksPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Модальное окно создания снимка */}
+      {showSnapshotModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Создать снимок периода</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Дата периода
+                </label>
+                <input
+                  type="date"
+                  value={snapshotData.period_date}
+                  onChange={(e) => setSnapshotData(prev => ({ ...prev, period_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Метка (необязательно)
+                </label>
+                <input
+                  type="text"
+                  value={snapshotData.label}
+                  onChange={(e) => setSnapshotData(prev => ({ ...prev, label: e.target.value }))}
+                  placeholder="Например: Январь 2024"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                <p className="font-medium mb-1">Будет сохранено:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Фиксированные затраты (общие)</li>
+                  <li>Фиксированные затраты по тракам</li>
+                  <li>Переменные затраты по тракам</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                onClick={() => setShowSnapshotModal(false)}
+                variant="secondary"
+                disabled={createSnapshotMutation.loading}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleCreateSnapshot}
+                variant="primary"
+                loading={createSnapshotMutation.loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Создать снимок
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}

@@ -84,6 +84,36 @@ class CostSnapshotViewSet(viewsets.ModelViewSet):
             CostSnapshotSerializer(snapshot).data,
             status=status.HTTP_201_CREATED
         )
+    
+    @action(detail=False, methods=['post'])
+    def create_from_current_data(self, request):
+        """Создать снимок из текущих данных (включая переменные затраты)"""
+        period_date = request.data.get('period_date', timezone.now())
+        label = request.data.get('label', f'Снимок от {timezone.now().strftime("%d.%m.%Y %H:%M:%S")}')
+        
+        # Преобразуем period_date в datetime если нужно
+        if isinstance(period_date, str):
+            try:
+                if len(period_date) == 7:  # YYYY-MM
+                    period_date = datetime.fromisoformat(f"{period_date}-01T00:00:00")
+                elif len(period_date) == 10:  # YYYY-MM-DD
+                    period_date = datetime.fromisoformat(f"{period_date}T00:00:00")
+                else:
+                    period_date = datetime.fromisoformat(period_date)
+            except ValueError:
+                return Response(
+                    {'error': 'Неверный формат даты'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        # приведение к дате для модели
+        if isinstance(period_date, datetime):
+            period_date = period_date.date()
+        
+        snapshot = SnapshotService.create_snapshot_from_current_data(period_date, label)
+        return Response(
+            CostSnapshotSerializer(snapshot).data,
+            status=status.HTTP_201_CREATED
+        )
 
     @action(detail=False, methods=['get'])
     def by_period(self, request):

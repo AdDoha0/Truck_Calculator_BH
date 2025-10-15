@@ -48,5 +48,11 @@ export const snapshotsApi = {
     const response = await apiClient.post('/snapshots/compare/', { snapshot_ids: snapshotIds });
     return response.data;
   },
+
+  // Создать снимок из текущих данных
+  createFromCurrentData: async (data: { period_date: string; label?: string }): Promise<CostSnapshot> => {
+    const response = await apiClient.post('/snapshots/create_from_current_data/', data);
+    return response.data;
+  },
 };
 

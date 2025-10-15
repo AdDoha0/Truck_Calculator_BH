@@ -19,19 +19,13 @@ const TruckFixedCostsSection: React.FC<TruckFixedCostsSectionProps> = ({ truckId
   const { data: periodData, loading: periodLoading } = useApi(() => {
     if (!selectedPeriod) return Promise.resolve(null);
     
-    // Если выбран "current", передаем как есть
+    // Если выбран "current", получаем текущие данные
     if (selectedPeriod === 'current') {
-      return costsApi.getPeriodDataWithSnapshot({ period_month: 'current' });
+      return costsApi.getCurrentData();
     }
     
-    // Преобразуем выбранную дату в формат для API
-    let periodParam = selectedPeriod;
-    if (periodParam.length === 19) { // YYYY-MM-DDTHH:MM:SS
-      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
-    } else if (periodParam.length === 16) { // YYYY-MM-DDTHH:MM
-      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
-    }
-    return costsApi.getPeriodDataWithSnapshot({ period_month: periodParam });
+    // теперь selectedPeriod = snapshot_id
+    return costsApi.getPeriodDataWithSnapshot({ snapshot_id: selectedPeriod });
   }, [selectedPeriod]);
   
   // Получаем текущие фиксированные затраты (для редактирования)

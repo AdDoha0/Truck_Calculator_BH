@@ -19,10 +19,9 @@ class FixedCostsTruckAdmin(admin.ModelAdmin):
 @admin.register(TruckVariableCosts)
 class TruckVariableCostsAdmin(admin.ModelAdmin):
     list_display = [
-        'id', 'truck', 'period_month', 'driver_name', 
+        'id', 'truck', 'snapshot', 'driver_name', 
         'total_rev', 'total_miles', 'salary', 'fuel', 'tolls'
     ]
-    list_filter = ['period_month', 'truck']
+    list_filter = ['snapshot', 'truck']
     search_fields = ['truck__tractor_no', 'driver_name']
-    ordering = ['-period_month', 'truck']
-    date_hierarchy = 'period_month'
+    ordering = ['-snapshot', 'truck']

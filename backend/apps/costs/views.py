@@ -3,12 +3,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from .models import FixedCostsCommon, FixedCostsTruck, TruckVariableCosts
+from .models import FixedCostsCommon, FixedCostsTruck, TruckVariableCosts, TruckCurrentVariableCosts
 from .serializers import (
     FixedCostsCommonSerializer, 
     FixedCostsTruckSerializer, 
     TruckVariableCostsSerializer,
-    TruckVariableCostsCreateSerializer
+    TruckVariableCostsCreateSerializer,
+    TruckCurrentVariableCostsSerializer,
+    TruckCurrentVariableCostsCreateSerializer
 )
 
 
@@ -86,23 +88,10 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
         """Получить переменные затраты с фильтрацией"""
         queryset = self.get_queryset()
         
-        # Фильтрация по месяцу
-        period_month = request.query_params.get('period_month')
-        if period_month:
-            # Если period_month приходит как массив, берем первый элемент
-            if isinstance(period_month, list):
-                period_month = period_month[0]
-            
-            # Обрабатываем различные форматы дат
-            if len(period_month) == 7:  # YYYY-MM формат
-                period_month = f"{period_month}-01T00:00:00"
-            elif len(period_month) == 10:  # YYYY-MM-DD формат
-                period_month = f"{period_month}T00:00:00"
-            elif len(period_month) == 16:  # YYYY-MM-DDTHH:MM формат
-                period_month = f"{period_month}:00"
-            
-            # Фильтруем по точному совпадению даты и времени
-            queryset = queryset.filter(period_month=period_month)
+        # Фильтрация по снимку (игнорируем 'current')
+        snapshot_id = request.query_params.get('snapshot_id')
+        if snapshot_id and snapshot_id != 'current':
+            queryset = queryset.filter(snapshot_id=snapshot_id)
         
         # Фильтрация по траку
         truck_id = request.query_params.get('truck_id')
@@ -116,26 +105,6 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
         """Создать переменные затраты"""
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            period_month = serializer.validated_data['period_month']
-            
-            # Проверяем, есть ли уже снимок для этого периода
-            existing_variable_costs = TruckVariableCosts.objects.filter(
-                period_month=period_month
-            ).first()
-            
-            if existing_variable_costs and existing_variable_costs.cost_snapshot:
-                # Используем существующий снимок
-                snapshot = existing_variable_costs.cost_snapshot
-            else:
-                # Создаем новый снимок текущих фиксированных затрат
-                from apps.snapshots.services import SnapshotService
-                snapshot = SnapshotService.create_snapshot(
-                    period_month, 
-                    f"Автоматический снимок для {period_month.strftime('%Y-%m-%d')}"
-                )
-            
-            # Создаем переменные затраты со ссылкой на снимок
-            serializer.save(cost_snapshot=snapshot)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -151,40 +120,33 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def periods(self, request):
-        """Получить список всех уникальных периодов из базы данных"""
-        # Получаем все уникальные периоды из переменных затрат
-        periods = TruckVariableCosts.objects.values_list('period_month', flat=True).distinct().order_by('-period_month')
-        
-        # Форматируем периоды для отображения
-        formatted_periods = []
-        
-        # Добавляем опцию "Текущие данные" в начало списка
-        formatted_periods.append({
+        """Получить список периодов на основе снимков"""
+        from apps.snapshots.models import CostSnapshot
+        snapshots = CostSnapshot.objects.all().order_by('-period_date', '-snapshot_at')
+        formatted = [{
             'value': 'current',
             'label': 'Текущие данные',
             'date': 'current',
             'datetime': 'current'
-        })
-        
-        for period in periods:
-            formatted_periods.append({
-                'value': period.isoformat(),
-                'label': period.strftime('%d %B %Y г.'),
-                'date': period.date().isoformat(),
-                'datetime': period.isoformat()
+        }]
+        for s in snapshots:
+            formatted.append({
+                'value': str(s.id),
+                'label': s.period_date.strftime('%d %B %Y г.'),
+                'date': s.period_date.isoformat(),
+                'datetime': s.snapshot_at.isoformat(),
             })
-        
-        return Response(formatted_periods)
+        return Response(formatted)
     
     @action(detail=False, methods=['get'])
     def by_period_with_snapshot(self, request):
-        """Получить переменные затраты за период с фиксированными затратами из снимка"""
-        period_month = request.query_params.get('period_month')
-        if not period_month:
-            return Response({'error': 'period_month required'}, status=status.HTTP_400_BAD_REQUEST)
+        """Получить данные по snapshot: current или snapshot_id"""
+        snapshot_id = request.query_params.get('snapshot_id') or request.query_params.get('period_month')
+        if not snapshot_id:
+            return Response({'error': 'snapshot_id required'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Если запрошены текущие данные, возвращаем актуальные фиксированные затраты
-        if period_month == 'current':
+        if snapshot_id == 'current':
             from apps.costs.models import FixedCostsCommon, FixedCostsTruck
             from apps.trucks.models import Truck
             
@@ -237,43 +199,33 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
                 'snapshot': None  # Нет снимка для текущих данных
             })
         
-        # Обрабатываем различные форматы дат
-        if len(period_month) == 7:  # YYYY-MM формат
-            period_month = f"{period_month}-01T00:00:00"
-        elif len(period_month) == 10:  # YYYY-MM-DD формат
-            period_month = f"{period_month}T00:00:00"
-        elif len(period_month) == 16:  # YYYY-MM-DDTHH:MM формат
-            period_month = f"{period_month}:00"
-        
-        # Получаем переменные затраты за период
-        variable_costs = TruckVariableCosts.objects.filter(period_month=period_month)
-        
-        # Получаем снимок из первой записи (все записи за период должны иметь один снимок)
-        snapshot = None
-        if variable_costs.exists():
-            snapshot = variable_costs.first().cost_snapshot
+        # Получаем снимок и связанные данные
+        from apps.snapshots.models import CostSnapshot
+        try:
+            snapshot = CostSnapshot.objects.get(id=snapshot_id)
+        except CostSnapshot.DoesNotExist:
+            return Response({'error': 'snapshot not found'}, status=status.HTTP_404_NOT_FOUND)
+        variable_costs = TruckVariableCosts.objects.filter(snapshot=snapshot)
         
         # Получаем фиксированные затраты из снимка
         fixed_costs_data = None
-        if snapshot:
-            from apps.snapshots.services import SnapshotService
-            fixed_costs_data = SnapshotService.get_snapshot_details(snapshot)
+        from apps.snapshots.services import SnapshotService
+        fixed_costs_data = SnapshotService.get_snapshot_details(snapshot)
         
         # Получаем общие фиксированные затраты из снимка
         common_costs_data = None
-        if snapshot:
-            from apps.snapshots.models import CostSnapshotCommon
-            try:
-                snapshot_common = CostSnapshotCommon.objects.get(snapshot=snapshot)
-                common_costs_data = {
-                    'ifta': snapshot_common.ifta,
-                    'insurance': snapshot_common.insurance,
-                    'eld': snapshot_common.eld,
-                    'tablet': snapshot_common.tablet,
-                    'tolls': snapshot_common.tolls,
-                }
-            except CostSnapshotCommon.DoesNotExist:
-                pass
+        from apps.snapshots.models import CostSnapshotCommon
+        try:
+            snapshot_common = CostSnapshotCommon.objects.get(snapshot=snapshot)
+            common_costs_data = {
+                'ifta': snapshot_common.ifta,
+                'insurance': snapshot_common.insurance,
+                'eld': snapshot_common.eld,
+                'tablet': snapshot_common.tablet,
+                'tolls': snapshot_common.tolls,
+            }
+        except CostSnapshotCommon.DoesNotExist:
+            pass
         
         return Response({
             'variable_costs': TruckVariableCostsSerializer(variable_costs, many=True).data,
@@ -285,4 +237,118 @@ class TruckVariableCostsViewSet(viewsets.ModelViewSet):
                 'snapshot_at': snapshot.snapshot_at.isoformat(),
                 'label': snapshot.label
             } if snapshot else None
+        })
+
+
+class TruckCurrentVariableCostsViewSet(viewsets.ModelViewSet):
+    """ViewSet для работы с текущими переменными затратами"""
+    queryset = TruckCurrentVariableCosts.objects.all()
+    serializer_class = TruckCurrentVariableCostsSerializer
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TruckCurrentVariableCostsCreateSerializer
+        return TruckCurrentVariableCostsSerializer
+    
+    def list(self, request, *args, **kwargs):
+        """Получить текущие переменные затраты"""
+        queryset = self.get_queryset()
+        
+        # Фильтрация по траку
+        truck_id = request.query_params.get('truck_id')
+        if truck_id:
+            queryset = queryset.filter(truck_id=truck_id)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    def create(self, request, *args, **kwargs):
+        """Создать или обновить текущие переменные затраты для трака"""
+        truck_id = request.data.get('truck')
+        if not truck_id:
+            return Response(
+                {'error': 'truck field is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Проверяем, есть ли уже запись для этого трака
+        try:
+            existing_record = TruckCurrentVariableCosts.objects.get(truck_id=truck_id)
+            # Обновляем существующую запись
+            serializer = self.get_serializer(existing_record, data=request.data)
+        except TruckCurrentVariableCosts.DoesNotExist:
+            # Создаем новую запись
+            serializer = self.get_serializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'], url_path='by-truck/(?P<truck_id>[^/.]+)')
+    def by_truck(self, request, truck_id=None):
+        """Получить текущие переменные затраты для конкретного трака"""
+        try:
+            current_costs = TruckCurrentVariableCosts.objects.get(truck_id=truck_id)
+            serializer = self.get_serializer(current_costs)
+            return Response(serializer.data)
+        except TruckCurrentVariableCosts.DoesNotExist:
+            return Response({}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def current_data(self, request):
+        """Получить все текущие данные (фиксированные + переменные)"""
+        from apps.trucks.models import Truck
+        
+        # Получаем текущие общие фиксированные затраты
+        try:
+            common_costs = FixedCostsCommon.objects.first()
+            common_costs_data = {
+                'ifta': common_costs.ifta if common_costs else 0,
+                'insurance': common_costs.insurance if common_costs else 0,
+                'eld': common_costs.eld if common_costs else 0,
+                'tablet': common_costs.tablet if common_costs else 0,
+                'tolls': common_costs.tolls if common_costs else 0,
+            }
+        except:
+            common_costs_data = {
+                'ifta': 0, 'insurance': 0, 'eld': 0, 'tablet': 0, 'tolls': 0
+            }
+        
+        # Получаем текущие фиксированные затраты по тракам
+        trucks_data = []
+        trucks = Truck.objects.all()
+        for truck in trucks:
+            try:
+                truck_costs = FixedCostsTruck.objects.get(truck=truck)
+                trucks_data.append({
+                    'truck_id': truck.id,
+                    'truck_tractor_no': truck.tractor_no,
+                    'truck_payment': truck_costs.truck_payment,
+                    'trailer_payment': truck_costs.trailer_payment,
+                    'physical_damage_insurance_truck': truck_costs.physical_damage_insurance_truck,
+                    'physical_damage_insurance_trailer': truck_costs.physical_damage_insurance_trailer,
+                })
+            except FixedCostsTruck.DoesNotExist:
+                trucks_data.append({
+                    'truck_id': truck.id,
+                    'truck_tractor_no': truck.tractor_no,
+                    'truck_payment': 0,
+                    'trailer_payment': 0,
+                    'physical_damage_insurance_truck': 0,
+                    'physical_damage_insurance_trailer': 0,
+                })
+        
+        # Получаем текущие переменные затраты
+        current_variable_costs = TruckCurrentVariableCosts.objects.all()
+        variable_costs_data = TruckCurrentVariableCostsSerializer(current_variable_costs, many=True).data
+        
+        return Response({
+            'fixed_costs': {
+                'common': common_costs_data,
+                'trucks': trucks_data
+            },
+            'variable_costs': variable_costs_data,
+            'common_costs': common_costs_data,
+            'snapshot': None  # Нет снимка для текущих данных
         })

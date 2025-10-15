@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import date, datetime
 from .models import CostSnapshot, CostSnapshotCommon, CostSnapshotTruck
-from apps.costs.models import FixedCostsCommon, FixedCostsTruck
+from apps.costs.models import FixedCostsCommon, FixedCostsTruck, TruckCurrentVariableCosts, TruckVariableCosts
 from apps.trucks.models import Truck
 
 
@@ -23,8 +23,10 @@ class SnapshotService:
             CostSnapshot: Созданный снимок
         """
         # Создаем основной снимок
+        # Приводим к типу date (модель хранит DateField)
+        period_only = period_date.date() if isinstance(period_date, datetime) else period_date
         snapshot = CostSnapshot.objects.create(
-            period_date=period_date,
+            period_date=period_only,
             label=label
         )
         
@@ -251,4 +253,66 @@ class SnapshotService:
             'common': common_costs,
             'trucks': trucks_data
         }
+    
+    @staticmethod
+    @transaction.atomic
+    def create_snapshot_from_current_data(period_date: datetime, label: str = None) -> CostSnapshot:
+        """
+        Создать снимок из текущих данных (включая переменные затраты)
+        
+        Args:
+            period_date: Дата периода для снимка
+            label: Опциональная метка для снимка
+            
+        Returns:
+            CostSnapshot: Созданный снимок
+        """
+        # Создаем основной снимок
+        period_only = period_date.date() if isinstance(period_date, datetime) else period_date
+        snapshot = CostSnapshot.objects.create(
+            period_date=period_only,
+            label=label
+        )
+        
+        # Копируем общие фиксированные стоимости
+        common_costs = FixedCostsCommon.objects.first()
+        if common_costs:
+            CostSnapshotCommon.objects.create(
+                snapshot=snapshot,
+                ifta=common_costs.ifta,
+                insurance=common_costs.insurance,
+                eld=common_costs.eld,
+                tablet=common_costs.tablet,
+                tolls=common_costs.tolls
+            )
+        
+        # Копируем фиксированные стоимости по тракам
+        truck_costs = FixedCostsTruck.objects.all()
+        for truck_cost in truck_costs:
+            CostSnapshotTruck.objects.create(
+                snapshot=snapshot,
+                truck=truck_cost.truck,
+                truck_payment=truck_cost.truck_payment,
+                trailer_payment=truck_cost.trailer_payment,
+                physical_damage_insurance_truck=truck_cost.physical_damage_insurance_truck,
+                physical_damage_insurance_trailer=truck_cost.physical_damage_insurance_trailer
+            )
+        
+        # Копируем текущие переменные затраты в исторические, привязав к снимку
+        current_variable_costs = TruckCurrentVariableCosts.objects.select_related('truck').all()
+        for current_cost in current_variable_costs:
+            TruckVariableCosts.objects.update_or_create(
+                snapshot=snapshot,
+                truck=current_cost.truck,
+                defaults={
+                    'driver_name': current_cost.driver_name,
+                    'total_rev': current_cost.total_rev,
+                    'total_miles': current_cost.total_miles,
+                    'salary': current_cost.salary,
+                    'fuel': current_cost.fuel,
+                    'tolls': current_cost.tolls,
+                }
+            )
+        
+        return snapshot
 

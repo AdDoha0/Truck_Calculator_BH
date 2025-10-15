@@ -81,7 +81,7 @@ const TruckDetailPage: React.FC = () => {
         <TruckFixedCostsSection truckId={truckId} selectedPeriod={selectedPeriod} />
       </div>
 
-      <TruckVariableCostsSection truckId={truckId} />
+      <TruckVariableCostsSection truckId={truckId} selectedPeriod={selectedPeriod} />
 
       <ConfirmDialog
         isOpen={deleteConfirm}

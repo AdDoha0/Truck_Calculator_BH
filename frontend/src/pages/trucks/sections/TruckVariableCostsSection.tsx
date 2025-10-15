@@ -8,61 +8,57 @@ import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
 import { useApi, useApiMutation } from '../../../shared/hooks/useApi';
 import { costsApi } from '../../../features/costs/api/costsApi';
 import type { TableColumn } from '../../../shared/ui/types';
-import type { TruckVariableCosts, TruckVariableCostsCreate } from '../../../types';
+import type { TruckCurrentVariableCosts } from '../../../types';
 
 interface TruckVariableCostsSectionProps {
   truckId: number;
+  selectedPeriod?: string;
 }
 
-const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ truckId }) => {
+const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ truckId, selectedPeriod }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingCosts, setEditingCosts] = useState<TruckVariableCosts | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; costs: TruckVariableCosts | null }>({
+  const [editingCosts, setEditingCosts] = useState<TruckCurrentVariableCosts | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; costs: TruckCurrentVariableCosts | null }>({
     isOpen: false,
     costs: null,
   });
 
-  const { data: variableCosts, loading, refetch } = useApi(() => costsApi.getVariableCosts({ truck_id: truckId }), [truckId]);
-  const createMutation = useApiMutation(costsApi.createVariableCosts);
-  const updateMutation = useApiMutation((params: { id: number; data: TruckVariableCostsCreate }) =>
-    costsApi.updateVariableCosts(params.id, params.data)
-  );
-  const deleteMutation = useApiMutation(costsApi.deleteVariableCosts);
+  // Определяем, работаем ли с текущими данными или историческими
+  const isCurrentData = selectedPeriod === 'current';
 
-  const handleSubmit = async (data: TruckVariableCostsCreate) => {
+  // Получаем данные в зависимости от выбранного периода
+  const currentDataHook = useApi(() => 
+    costsApi.getCurrentVariableCostsByTruck(truckId), 
+    [truckId, selectedPeriod]
+  );
+  
+  const historicalDataHook = useApi(() => 
+    costsApi.getVariableCosts({ truck_id: truckId, snapshot_id: selectedPeriod }), 
+    [truckId, selectedPeriod]
+  );
+  
+  const { data: variableCosts, loading, refetch } = isCurrentData ? currentDataHook : historicalDataHook;
+
+  const createMutation = useApiMutation(
+    isCurrentData ? costsApi.createCurrentVariableCosts : costsApi.createVariableCosts
+  );
+  const updateMutation = useApiMutation((params: { id: number; data: any }) =>
+    isCurrentData 
+      ? costsApi.updateCurrentVariableCosts(params.id, params.data)
+      : costsApi.updateVariableCosts(params.id, params.data)
+  );
+  const deleteMutation = useApiMutation(
+    isCurrentData ? costsApi.deleteCurrentVariableCosts : costsApi.deleteVariableCosts
+  );
+
+  const handleSubmit = async (data: any) => {
     try {
       if (editingCosts?.id) {
         await updateMutation.mutate({ id: editingCosts.id, data });
       } else {
-        // Проверяем, есть ли уже запись для этого трака и периода
-        const existingRecord = variableCosts?.find(cost => {
-          // Нормализуем даты для сравнения
-          let existingDate = cost.period_month;
-          let newDate = data.period_month;
-          
-          // Приводим к единому формату YYYY-MM-DDTHH:MM:SS
-          if (existingDate.length === 7) {
-            existingDate = `${existingDate}-01T00:00:00`;
-          } else if (existingDate.length === 10) {
-            existingDate = `${existingDate}T00:00:00`;
-          } else if (existingDate.length === 16) {
-            existingDate = `${existingDate}:00`;
-          }
-          
-          if (newDate.length === 7) {
-            newDate = `${newDate}-01T00:00:00`;
-          } else if (newDate.length === 10) {
-            newDate = `${newDate}T00:00:00`;
-          } else if (newDate.length === 16) {
-            newDate = `${newDate}:00`;
-          }
-          
-          return cost.truck === data.truck && existingDate === newDate;
-        });
-        
-        if (existingRecord) {
-          alert(`Запись для трака и периода ${data.period_month} уже существует. Выберите другой период или отредактируйте существующую запись.`);
-          return;
+        // Для текущих данных добавляем truck_id
+        if (isCurrentData) {
+          data.truck = truckId;
         }
         
         await createMutation.mutate(data);
@@ -70,7 +66,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       setIsAddModalOpen(false);
       setEditingCosts(null);
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка при сохранении переменных затрат:', error);
       // Показываем более подробную информацию об ошибке
       if (error.response?.data?.non_field_errors) {
@@ -81,12 +77,12 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
     }
   };
 
-  const handleEdit = (costs: TruckVariableCosts) => {
+  const handleEdit = (costs: any) => {
     setEditingCosts(costs);
     setIsAddModalOpen(true);
   };
 
-  const handleDelete = (costs: TruckVariableCosts) => {
+  const handleDelete = (costs: any) => {
     setDeleteConfirm({ isOpen: true, costs });
   };
 
@@ -102,40 +98,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
     }
   };
 
-  const columns: TableColumn<TruckVariableCosts>[] = [
-    {
-      key: 'period_month',
-      title: 'Период',
-      sortable: true,
-      render: (value: string) => {
-        try {
-          // Обрабатываем различные форматы дат
-          let dateValue = value;
-          
-          if (value.length === 7) {
-            // YYYY-MM -> YYYY-MM-01T00:00:00
-            dateValue = `${value}-01T00:00:00`;
-          } else if (value.length === 10) {
-            // YYYY-MM-DD -> YYYY-MM-DDTHH:MM:SS
-            dateValue = `${value}T00:00:00`;
-          } else if (value.length === 16) {
-            // YYYY-MM-DDTHH:MM -> YYYY-MM-DDTHH:MM:SS
-            dateValue = `${value}:00`;
-          }
-          
-          const date = new Date(dateValue);
-          return date.toLocaleString('ru-RU', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-        } catch {
-          return value;
-        }
-      },
-    },
+  const columns: TableColumn<any>[] = [
     {
       key: 'driver_name',
       title: 'Водитель',
@@ -166,10 +129,10 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       title: 'Дороги',
       render: (value: number) => `$${value}`,
     },
-    {
+    ...(isCurrentData ? [{
       key: 'actions',
       title: 'Действия',
-      render: (_, costs) => (
+      render: (_: any, costs: any) => (
         <div className="flex space-x-2">
           <Button size="sm" variant="secondary" onClick={() => handleEdit(costs)}>
             Ред.
@@ -179,31 +142,38 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
           </Button>
         </div>
       ),
-    },
+    }] : []),
   ];
+
+  // Преобразуем данные для отображения
+  const displayData = isCurrentData 
+    ? (variableCosts ? [variableCosts] : []) // Для текущих данных показываем одну запись
+    : (Array.isArray(variableCosts) ? variableCosts : []); // Для исторических данных показываем массив
 
   return (
     <>
       <Card 
-        title="Переменные затраты по месяцам"
+        title={isCurrentData ? "Текущие переменные затраты" : "Переменные затраты (снимок)"}
         actions={
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setEditingCosts(null);
-              setIsAddModalOpen(true);
-            }}
-          >
-            Добавить
-          </Button>
+          isCurrentData ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditingCosts(null);
+                setIsAddModalOpen(true);
+              }}
+            >
+              {variableCosts ? 'Редактировать' : 'Добавить'}
+            </Button>
+          ) : undefined
         }
       >
         <Table
-          data={variableCosts || []}
+          data={displayData}
           columns={columns}
           loading={loading}
-          emptyMessage="Нет данных о переменных затратах"
+          emptyMessage={isCurrentData ? "Нет текущих переменных затрат" : "Нет данных о переменных затратах"}
         />
       </Card>
 
@@ -213,10 +183,10 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
           setIsAddModalOpen(false);
           setEditingCosts(null);
         }}
-        title={editingCosts ? 'Редактировать переменные затраты' : 'Добавить переменные затраты'}
+        title={editingCosts ? 'Редактировать переменные затраты' : (isCurrentData ? 'Добавить текущие переменные затраты' : 'Добавить переменные затраты')}
       >
         <VariableCostsForm
-          costs={editingCosts || undefined}
+          costs={editingCosts as any || undefined}
           truckId={truckId}
           onSubmit={handleSubmit}
           onCancel={() => {
@@ -224,37 +194,14 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
             setEditingCosts(null);
           }}
           loading={createMutation.loading || updateMutation.loading}
+          isCurrentData={isCurrentData}
         />
       </Modal>
 
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title="Удалить переменные затраты?"
-        message={`Вы уверены, что хотите удалить данные за период ${deleteConfirm.costs?.period_month ? (() => {
-          try {
-            // Обрабатываем различные форматы дат
-            let dateValue = deleteConfirm.costs.period_month;
-            
-            if (dateValue.length === 7) {
-              dateValue = `${dateValue}-01T00:00:00`;
-            } else if (dateValue.length === 10) {
-              dateValue = `${dateValue}T00:00:00`;
-            } else if (dateValue.length === 16) {
-              dateValue = `${dateValue}:00`;
-            }
-            
-            const date = new Date(dateValue);
-            return date.toLocaleString('ru-RU', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-          } catch {
-            return deleteConfirm.costs.period_month;
-          }
-        })() : ''}?`}
+        message={"Вы уверены, что хотите удалить текущие переменные затраты?"}
         confirmText="Удалить"
         cancelText="Отмена"
         onConfirm={confirmDelete}

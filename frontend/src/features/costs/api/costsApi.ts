@@ -3,8 +3,10 @@ import type {
   FixedCostsCommon, 
   FixedCostsTruck, 
   FixedCostsTruckCreate,
-  TruckVariableCosts, 
-  TruckVariableCostsCreate 
+  TruckVariableCosts,
+  TruckVariableCostsCreate,
+  TruckCurrentVariableCosts,
+  TruckCurrentVariableCostsCreate
 } from '../../../types';
 
 export const costsApi = {
@@ -46,7 +48,7 @@ export const costsApi = {
 
   // Переменные затраты трака
   getVariableCosts: async (params?: { 
-    period_month?: string; 
+    snapshot_id?: string | number; 
     truck_id?: number 
   }): Promise<TruckVariableCosts[]> => {
     const response = await apiClient.get('/costs/variable/', { params });
@@ -85,7 +87,7 @@ export const costsApi = {
 
   // Получить данные периода с снимком фиксированных затрат
   getPeriodDataWithSnapshot: async (params: { 
-    period_month: string; 
+    snapshot_id: string | number; 
   }): Promise<{
     variable_costs: TruckVariableCosts[];
     fixed_costs: any;
@@ -93,6 +95,52 @@ export const costsApi = {
     snapshot: any;
   }> => {
     const response = await apiClient.get('/costs/variable/by_period_with_snapshot/', { params });
+    return response.data;
+  },
+
+  // Текущие переменные затраты
+  getCurrentVariableCosts: async (params?: { 
+    truck_id?: number 
+  }): Promise<TruckCurrentVariableCosts[]> => {
+    const response = await apiClient.get('/costs/current-variable/', { params });
+    return response.data;
+  },
+
+  getCurrentVariableCost: async (id: number): Promise<TruckCurrentVariableCosts> => {
+    const response = await apiClient.get(`/costs/current-variable/${id}/`);
+    return response.data;
+  },
+
+  createCurrentVariableCosts: async (data: TruckCurrentVariableCostsCreate): Promise<TruckCurrentVariableCosts> => {
+    const response = await apiClient.post('/costs/current-variable/', data);
+    return response.data;
+  },
+
+  updateCurrentVariableCosts: async (id: number, data: Partial<TruckCurrentVariableCostsCreate>): Promise<TruckCurrentVariableCosts> => {
+    const response = await apiClient.put(`/costs/current-variable/${id}/`, data);
+    return response.data;
+  },
+
+  deleteCurrentVariableCosts: async (id: number): Promise<void> => {
+    await apiClient.delete(`/costs/current-variable/${id}/`);
+  },
+
+  getCurrentVariableCostsByTruck: async (truckId: number): Promise<TruckCurrentVariableCosts> => {
+    const response = await apiClient.get(`/costs/current-variable/by-truck/${truckId}/`);
+    return response.data;
+  },
+
+  // Получить все текущие данные (фиксированные + переменные)
+  getCurrentData: async (): Promise<{
+    fixed_costs: {
+      common: any;
+      trucks: any[];
+    };
+    variable_costs: TruckCurrentVariableCosts[];
+    common_costs: any;
+    snapshot: null;
+  }> => {
+    const response = await apiClient.get('/costs/current-variable/current_data/');
     return response.data;
   },
 };
