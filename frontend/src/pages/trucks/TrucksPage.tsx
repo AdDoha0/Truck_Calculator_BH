@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import TruckListSection from './sections/TruckListSection';
 import TruckFormSection from './sections/TruckFormSection';
 import TruckCostsTableSection from './sections/TruckCostsTableSection';
 import CommonCostsSection from './sections/CommonCostsSection';
@@ -23,8 +22,10 @@ const TrucksPage: React.FC = () => {
   const [editingTruck, setEditingTruck] = useState<Truck | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    // По умолчанию работаем с текущими данными, а не со строкой даты,
+    // чтобы не отправлять невалидный snapshot_id на бэкенд
     const periodFromUrl = searchParams.get('period');
-    return periodFromUrl || new Date().toISOString().slice(0, 16);
+    return periodFromUrl || 'current';
   });
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; truck: Truck | null }>({
     isOpen: false,
@@ -39,14 +40,19 @@ const TrucksPage: React.FC = () => {
   const { data: trucks, loading: trucksLoading, refetch: refetchTrucks } = useApi(trucksApi.getTrucks);
   
   // Получаем данные периода с снимком фиксированных затрат
-  const { data: periodData, refetch: refetchPeriodData } = useApi(() => {
+  const { data: periodData, refetch: refetchPeriodData } = useApi<any>(() => {
     // Если выбран "current", получаем текущие данные
     if (selectedMonth === 'current') {
       return costsApi.getCurrentData();
     }
-    
-    // Передаем идентификатор снимка
-    return costsApi.getPeriodDataWithSnapshot({ snapshot_id: selectedMonth as any });
+
+    // Если значение похоже на числовой id снимка — запрашиваем снимок,
+    // иначе безопасно возвращаем текущие данные
+    if (/^\d+$/.test(String(selectedMonth))) {
+      return costsApi.getPeriodDataWithSnapshot({ snapshot_id: Number(selectedMonth) });
+    }
+
+    return costsApi.getCurrentData();
   }, [selectedMonth]);
   
   const { data: periods } = useApi(costsApi.getPeriods);
@@ -55,7 +61,9 @@ const TrucksPage: React.FC = () => {
 
   // Инициализируем выбранный период первым доступным из базы данных
   React.useEffect(() => {
-    if (periods && periods.length > 0 && selectedMonth === new Date().toISOString().slice(0, 16)) {
+    // Если пришел список периодов и текущий выбор не числовой id и не 'current',
+    // устанавливаем первый доступный период из бэкенда
+    if (periods && periods.length > 0 && selectedMonth !== 'current' && !/^\d+$/.test(String(selectedMonth))) {
       setSelectedMonth(periods[0].value);
     }
   }, [periods, selectedMonth]);
@@ -249,7 +257,7 @@ const TrucksPage: React.FC = () => {
           </div>
 
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
               {trucksLoading ? (
                 <p>Загрузка...</p>
               ) : trucksWithCosts.length > 0 ? (
