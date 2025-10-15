@@ -154,10 +154,19 @@ const TrucksPage: React.FC = () => {
   }, [periods]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start gap-6">
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-4">
+    <div className="space-y-6 relative">
+      {/* Панель справа выводим абсолютно, чтобы не выедала ширину сетки карточек */}
+      <div className="hidden xl:block absolute right-0 top-0 w-80">
+        <CommonCostsSection 
+          snapshotCommonCosts={periodData?.common_costs}
+          isFromSnapshot={!!periodData?.snapshot}
+          snapshotId={periodData?.snapshot?.id}
+        />
+      </div>
+
+      {/* Контентная колонка */}
+      <div>
+          <div className="flex justify-between items-center mb-4 pr-0 xl:pr-96">
             <div>
               <h1 className="text-3xl font-bold text-secondary-900">Траки</h1>
               <p className="text-secondary-600 mt-1">
@@ -201,7 +210,7 @@ const TrucksPage: React.FC = () => {
           </div>
 
           {showForm && (
-            <div className="mb-6">
+            <div className="mb-6 pr-0 xl:pr-96">
               <TruckFormSection
                 truck={editingTruck || undefined}
                 onSubmit={handleFormSubmit}
@@ -210,7 +219,7 @@ const TrucksPage: React.FC = () => {
             </div>
           )}
 
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-4 pr-0 xl:pr-96">
             <div className="flex items-center space-x-4">
               <div className="flex bg-secondary-100 rounded-lg p-1">
                 <button
@@ -289,14 +298,6 @@ const TrucksPage: React.FC = () => {
           )}
         </div>
 
-        <div className="w-80">
-          <CommonCostsSection 
-            snapshotCommonCosts={periodData?.common_costs}
-            isFromSnapshot={!!periodData?.snapshot}
-            snapshotId={periodData?.snapshot?.id}
-          />
-        </div>
-      </div>
 
       {/* Модальное окно создания снимка */}
       {showSnapshotModal && (
