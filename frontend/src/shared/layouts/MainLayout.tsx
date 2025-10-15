@@ -7,11 +7,15 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  const handleToggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   return (
     <div className="min-h-screen bg-secondary-50">
-      <Header />
+      <Header onToggleSidebar={handleToggleSidebar} isSidebarOpen={isSidebarOpen} />
       <div className="flex">
-        <Sidebar />
+        <Sidebar collapsed={!isSidebarOpen} />
         <main className="flex-1 p-6">
           {children}
         </main>

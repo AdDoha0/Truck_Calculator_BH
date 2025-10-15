@@ -1,7 +1,12 @@
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  className?: string;
+  collapsed?: boolean;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ className, collapsed }) => {
   const navigation = [
     { name: 'Дашборд', href: '/dashboard', icon: '📊' },
     { name: 'Траки', href: '/trucks', icon: '🚛' },
@@ -11,7 +16,10 @@ const Sidebar: React.FC = () => {
   ];
 
   return (
-    <nav className="w-64 bg-white shadow-sm border-r border-secondary-200 min-h-screen">
+    <nav
+      className={`${collapsed ? 'w-0 overflow-hidden' : 'w-64'} bg-white shadow-sm border-r border-secondary-200 min-h-screen transition-all duration-300 ${className ?? ''}`}
+      aria-hidden={collapsed}
+    >
       <div className="p-4">
         <ul className="space-y-2">
           {navigation.map((item) => (
