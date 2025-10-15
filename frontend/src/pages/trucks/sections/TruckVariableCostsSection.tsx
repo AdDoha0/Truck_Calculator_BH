@@ -129,7 +129,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       title: 'Дороги',
       render: (value: number) => `$${value}`,
     },
-    ...(isCurrentData ? [{
+    {
       key: 'actions',
       title: 'Действия',
       render: (_: any, costs: any) => (
@@ -142,7 +142,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
           </Button>
         </div>
       ),
-    }] : []),
+    },
   ];
 
   // Преобразуем данные для отображения
@@ -155,18 +155,16 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       <Card 
         title={isCurrentData ? "Текущие переменные затраты" : "Переменные затраты (снимок)"}
         actions={
-          isCurrentData ? (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setEditingCosts(null);
-                setIsAddModalOpen(true);
-              }}
-            >
-              {variableCosts ? 'Редактировать' : 'Добавить'}
-            </Button>
-          ) : undefined
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setEditingCosts(null);
+              setIsAddModalOpen(true);
+            }}
+          >
+            {variableCosts ? 'Редактировать' : 'Добавить'}
+          </Button>
         }
       >
         <Table
@@ -201,7 +199,7 @@ const TruckVariableCostsSection: React.FC<TruckVariableCostsSectionProps> = ({ t
       <ConfirmDialog
         isOpen={deleteConfirm.isOpen}
         title="Удалить переменные затраты?"
-        message={"Вы уверены, что хотите удалить текущие переменные затраты?"}
+        message={isCurrentData ? "Вы уверены, что хотите удалить текущие переменные затраты?" : "Вы уверены, что хотите удалить запись прошлого периода?"}
         confirmText="Удалить"
         cancelText="Отмена"
         onConfirm={confirmDelete}

@@ -45,14 +45,8 @@ const TrucksPage: React.FC = () => {
       return costsApi.getCurrentData();
     }
     
-    // Преобразуем выбранную дату в формат для API
-    let periodParam = selectedMonth;
-    if (periodParam.length === 19) { // YYYY-MM-DDTHH:MM:SS
-      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
-    } else if (periodParam.length === 16) { // YYYY-MM-DDTHH:MM
-      periodParam = periodParam.slice(0, 10); // YYYY-MM-DD
-    }
-    return costsApi.getPeriodDataWithSnapshot({ period_month: periodParam });
+    // Передаем идентификатор снимка
+    return costsApi.getPeriodDataWithSnapshot({ snapshot_id: selectedMonth as any });
   }, [selectedMonth]);
   
   const { data: periods } = useApi(costsApi.getPeriods);
@@ -291,6 +285,7 @@ const TrucksPage: React.FC = () => {
           <CommonCostsSection 
             snapshotCommonCosts={periodData?.common_costs}
             isFromSnapshot={!!periodData?.snapshot}
+            snapshotId={periodData?.snapshot?.id}
           />
         </div>
       </div>

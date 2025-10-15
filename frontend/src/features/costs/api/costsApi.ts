@@ -98,6 +98,18 @@ export const costsApi = {
     return response.data;
   },
 
+  // Обновить общие фиксированные затраты внутри конкретного снимка
+  updateSnapshotCommonCosts: async (snapshotId: number, data: any) => {
+    const response = await apiClient.put(`/snapshots/${snapshotId}/common_costs/`, data);
+    return response.data;
+  },
+
+  // Обновить фиксированные затраты трака внутри конкретного снимка
+  updateSnapshotTruckCosts: async (snapshotId: number, truckId: number, data: any) => {
+    const response = await apiClient.put(`/snapshots/${snapshotId}/truck_costs/${truckId}/`, data);
+    return response.data;
+  },
+
   // Текущие переменные затраты
   getCurrentVariableCosts: async (params?: { 
     truck_id?: number 

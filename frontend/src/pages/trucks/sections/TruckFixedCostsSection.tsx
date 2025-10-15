@@ -16,7 +16,7 @@ const TruckFixedCostsSection: React.FC<TruckFixedCostsSectionProps> = ({ truckId
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   // Получаем данные из снимка для выбранного периода
-  const { data: periodData, loading: periodLoading } = useApi(() => {
+  const { data: periodData, loading: periodLoading, refetch: refetchPeriod } = useApi<any | null>(() => {
     if (!selectedPeriod) return Promise.resolve(null);
     
     // Если выбран "current", получаем текущие данные
@@ -42,13 +42,25 @@ const TruckFixedCostsSection: React.FC<TruckFixedCostsSectionProps> = ({ truckId
 
   const handleSubmit = async (data: FixedCostsTruckCreate) => {
     try {
-      if (fixedCosts?.id) {
-        await updateMutation.mutate({ id: fixedCosts.id, data });
+      if (isFromSnapshot && selectedPeriod) {
+        // Обновляем значения внутри снимка для данного трака
+        const snapshotId = typeof selectedPeriod === 'string' ? parseInt(selectedPeriod as string, 10) : (selectedPeriod as unknown as number);
+        await costsApi.updateSnapshotTruckCosts(snapshotId, truckId, {
+          truck_payment: data.truck_payment,
+          trailer_payment: data.trailer_payment,
+          physical_damage_insurance_truck: data.physical_damage_insurance_truck,
+          physical_damage_insurance_trailer: data.physical_damage_insurance_trailer,
+        });
+        await refetchPeriod();
       } else {
-        await createMutation.mutate(data);
+        if (fixedCosts?.id) {
+          await updateMutation.mutate({ id: fixedCosts.id, data });
+        } else {
+          await createMutation.mutate(data);
+        }
+        await refetch();
       }
       setIsEditModalOpen(false);
-      refetch();
     } catch (error) {
       console.error('Ошибка при сохранении фиксированных затрат:', error);
     }
@@ -87,17 +99,15 @@ const TruckFixedCostsSection: React.FC<TruckFixedCostsSectionProps> = ({ truckId
             <p className="text-secondary-500">Нет данных о фиксированных затратах</p>
           )}
 
-          {!isFromSnapshot && (
-            <div className="pt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                {fixedCosts ? 'Редактировать' : 'Добавить'}
-              </Button>
-            </div>
-          )}
+          <div className="pt-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              {displayCosts ? 'Редактировать' : 'Добавить'}
+            </Button>
+          </div>
         </div>
       </Card>
 

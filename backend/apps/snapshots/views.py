@@ -8,7 +8,9 @@ from .models import CostSnapshot
 from .serializers import (
     CostSnapshotSerializer, 
     SnapshotComparisonSerializer,
-    CreateSnapshotSerializer
+    CreateSnapshotSerializer,
+    CostSnapshotCommonSerializer,
+    CostSnapshotTruckSerializer,
 )
 from .services import SnapshotService
 
@@ -139,6 +141,52 @@ class CostSnapshotViewSet(viewsets.ModelViewSet):
         if not snapshot:
             return Response({'detail': 'Снимок не найден'}, status=status.HTTP_404_NOT_FOUND)
         return Response(CostSnapshotSerializer(snapshot).data)
+
+    @action(detail=True, methods=['put'], url_path='common_costs')
+    def update_common_costs(self, request, pk=None):
+        """Создать/обновить общие фиксированные затраты для снимка."""
+        snapshot = get_object_or_404(CostSnapshot, pk=pk)
+        # пытаемся получить существующую запись
+        from .models import CostSnapshotCommon
+        try:
+            instance = CostSnapshotCommon.objects.get(snapshot=snapshot)
+            serializer = CostSnapshotCommonSerializer(instance, data={
+                'snapshot': snapshot.id,
+                **request.data,
+            })
+        except CostSnapshotCommon.DoesNotExist:
+            serializer = CostSnapshotCommonSerializer(data={
+                'snapshot': snapshot.id,
+                **request.data,
+            })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['put'], url_path='truck_costs/(?P<truck_id>[^/.]+)')
+    def update_truck_costs(self, request, pk=None, truck_id=None):
+        """Создать/обновить фиксированные затраты по траку в указанном снимке."""
+        snapshot = get_object_or_404(CostSnapshot, pk=pk)
+        from .models import CostSnapshotTruck
+        # приводим данные к сериализатору
+        payload = {
+            'snapshot': snapshot.id,
+            'truck': int(truck_id),
+            'truck_payment': request.data.get('truck_payment', 0),
+            'trailer_payment': request.data.get('trailer_payment', 0),
+            'physical_damage_insurance_truck': request.data.get('physical_damage_insurance_truck', 0),
+            'physical_damage_insurance_trailer': request.data.get('physical_damage_insurance_trailer', 0),
+        }
+        try:
+            instance = CostSnapshotTruck.objects.get(snapshot=snapshot, truck_id=truck_id)
+            serializer = CostSnapshotTruckSerializer(instance, data=payload)
+        except CostSnapshotTruck.DoesNotExist:
+            serializer = CostSnapshotTruckSerializer(data=payload)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'])
     def details(self, request, pk=None):

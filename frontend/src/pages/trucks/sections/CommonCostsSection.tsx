@@ -10,11 +10,13 @@ import type { FixedCostsCommon } from '../../../types';
 interface CommonCostsSectionProps {
   snapshotCommonCosts?: any;
   isFromSnapshot?: boolean;
+  snapshotId?: number;
 }
 
 const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({ 
   snapshotCommonCosts, 
-  isFromSnapshot = false 
+  isFromSnapshot = false,
+  snapshotId,
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { data: commonCosts, loading, refetch } = useApi(costsApi.getCommonCosts);
@@ -25,7 +27,11 @@ const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({
 
   const handleSubmit = async (data: Partial<FixedCostsCommon>) => {
     try {
-      await updateMutation.mutate(data);
+      if (isFromSnapshot && snapshotId) {
+        await costsApi.updateSnapshotCommonCosts(snapshotId, data);
+      } else {
+        await updateMutation.mutate(data);
+      }
       setIsEditModalOpen(false);
       refetch();
     } catch (error) {
@@ -66,17 +72,15 @@ const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({
             <p className="text-secondary-500">Нет данных</p>
           )}
           
-          {!isFromSnapshot && (
-            <div className="pt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                Редактировать
-              </Button>
-            </div>
-          )}
+          <div className="pt-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              Редактировать
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -86,7 +90,7 @@ const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({
         title="Редактировать общие затраты"
       >
         <CommonCostsForm
-          costs={commonCosts}
+          costs={commonCosts || undefined}
           onSubmit={handleSubmit}
           onCancel={() => setIsEditModalOpen(false)}
           loading={updateMutation.loading}
