@@ -42,11 +42,11 @@ const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({
   return (
     <>
       <Card title={`Общие фиксированные затраты${isFromSnapshot ? ' (из снимка)' : ''}`}>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {loading ? (
             <p className="text-secondary-500">Загрузка...</p>
           ) : displayCosts ? (
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-secondary-600">IFTA:</span>
                 <span className="ml-2 font-medium">${displayCosts.ifta || 0}</span>
@@ -72,7 +72,7 @@ const CommonCostsSection: React.FC<CommonCostsSectionProps> = ({
             <p className="text-secondary-500">Нет данных</p>
           )}
           
-          <div className="pt-2">
+          <div className="pt-1">
             <Button
               variant="secondary"
               size="sm"

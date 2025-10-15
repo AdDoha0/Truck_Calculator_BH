@@ -156,7 +156,7 @@ const TrucksPage: React.FC = () => {
   return (
     <div className="space-y-6 relative">
       {/* Панель справа выводим абсолютно, чтобы не выедала ширину сетки карточек */}
-      <div className="hidden xl:block absolute right-0 top-0 w-80">
+      <div className="hidden xl:block absolute right-0 top-0 w-96">
         <CommonCostsSection 
           snapshotCommonCosts={periodData?.common_costs}
           isFromSnapshot={!!periodData?.snapshot}
@@ -166,7 +166,7 @@ const TrucksPage: React.FC = () => {
 
       {/* Контентная колонка */}
       <div>
-          <div className="flex justify-between items-center mb-4 pr-0 xl:pr-96">
+          <div className="flex justify-between items-start mb-4 pr-0 xl:pr-96">
             <div>
               <h1 className="text-3xl font-bold text-secondary-900">Траки</h1>
               <p className="text-secondary-600 mt-1">
@@ -190,7 +190,7 @@ const TrucksPage: React.FC = () => {
               ) : null}
               
               {selectedMonth === 'current' && (
-                <div className="mt-3">
+                <div className="mt-3 flex items-center space-x-3">
                   <Button
                     onClick={() => setShowSnapshotModal(true)}
                     variant="primary"
@@ -198,15 +198,16 @@ const TrucksPage: React.FC = () => {
                   >
                     📸 Сохранить период
                   </Button>
+                  <Button
+                    onClick={() => setShowForm(true)}
+                    variant="primary"
+                  >
+                    Добавить трак
+                  </Button>
                 </div>
               )}
             </div>
-            <Button
-              onClick={() => setShowForm(true)}
-              variant="primary"
-            >
-              Добавить трак
-            </Button>
+            {/* При выборе периода кнопку не показываем вовсе */}
           </div>
 
           {showForm && (
